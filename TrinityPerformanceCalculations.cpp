@@ -7,16 +7,17 @@
 #include <TStyle.h>
 #include <TMath.h>
 #include <TH1D.h>
+#include <TH2F.h>
+#include <TMarker.h>
+#include <TText.h>
 
 #include <TROOT.h>
 #include <TApplication.h>
 
 
 #include <stdio.h>
-
-#include <iostream>
 #include <fstream>
-#include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -82,7 +83,7 @@ Double_t yMax = 60;
 Double_t yDelta = 1;
 Double_t MaxElevation = 10; //elevation angle (determines path through Earth;
 Double_t DeltaAngle = 0.1; //steps in azimuth and elevation 
-Double_t DeltaAngleAz = 0.3; //steps in azimuth  
+Double_t DeltaAngleAz = 0.1; //steps in azimuth  
 Double_t nuIndex = 2; //power law index of the neutrino spectrum the minus sign is added later
 Double_t dMaxCherenkovAzimuthAngle = 40.0; //maximum azimuth angle for cherenkov 
 Double_t dMaxFluorescenceDistance = 100;
@@ -107,6 +108,14 @@ TGraph *grsCC;
 TGraph *grsNC;
 
 TH1D *hTriggeredAzimuthAngles;
+
+//~ TH2F *skymap = new TH2F("skymap","Acceptance Skymap", 360, -180, 180, 360, -180, 180);
+TH2F *skymap = new TH2F("skymap","Acceptance Skymap", 360, -180, 180, 179, -89.5, 89.5);
+TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep [150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
+TH2F *skymapFull360Sweep = (TH2F*)skymapSingleAngle->Clone("skymapFull360Sweep");
+TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over 1 Year [9/01/2020 - 9/01/2021]", 361, -180.05, 180.05, 181, -90.05, 90.05);
+//~ TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection over 12 Hour Exposure", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
+//~ TH2F *skymapTEMP = (TH2F*)skymapSingleAngle->Clone("skymapFullProjection");
 
 string Hold()
 {
@@ -714,8 +723,8 @@ Double_t PDecay(Double_t Etau, Double_t y, Double_t elevation, Double_t azimuth)
         if (dem-dd-dInFoV < 0 ) //if we are below the plane
           az = azimuth;
      }
-    else
-      cout<<"in PDecay, azimuth is zero or g is smaller zero"<<endl;
+    //~ else
+      //~ cout<<"in PDecay, azimuth is zero or g is smaller zero"<<endl;
    //get PE for new azimuth
      //double az = asin(d/dDistanceToWhereTauStarts); //azimuth for that distance
    if(fPE->Eval(az)*Etau*0.5<dMinimumNumberPhotoelectrons)
@@ -1054,7 +1063,6 @@ cout<<i+1<<"  "<<hTauSpec->GetBinCenter(i+1)  <<" taus cont: "<<hTauSpec->GetBin
 //loop
 Double_t CalculateAcceptance(Double_t dMinEnu, Double_t dMaxEnu,TGraph *grDiffAcceptance,TH1D *hTau)
 {
-
    dMinEnu = pow(10,dMinEnu);
    dMaxEnu = pow(10,dMaxEnu);
 
@@ -1157,7 +1165,6 @@ axis->Delete();
                   }
                if(dDeltaAcceptance<1e-10 && y>50) //won't get any more acceptance. The >60 is to make sure we do not miss fluorescence events whic can be seen from the back
                    break;
-
                dAcceptance+=dDeltaAcceptance*sin(elevation/180.*pi); //projection of area cell to trajectory
                //   cout<<"distance "<<y<<" prob"<<dDeltaAcceptance<<" elevation  "<<elevation<<endl;
                azimuth+=DeltaAngleAz;
@@ -1181,7 +1188,539 @@ axis->Delete();
     y+=yDelta;
     if(dAcceptance<1e-10 && y>50) //no sense to increase in distance if we can't see any showers now
        break;
+       break;
   }//end looping over distances
+  cout<<"adaasdas "<<dIntegratedAcceptance<<endl;
+return (dIntegratedAcceptance*dConversion);
+}
+
+Double_t CalculateAcceptance2(Double_t dMinEnu, Double_t dMaxEnu,TGraph *grDiffAcceptance,TH1D *hTau)
+{
+
+	dMinEnu = pow(10,dMinEnu);
+   dMaxEnu = pow(10,dMaxEnu);
+   Double_t latitude = 38.52028; //lat of frisco peak, utah
+	Double_t LST = 212.33; // Local Sidereal Time 15:09:19 corresponds to 00:00:00 UTC on 9/01/2020 (start date and time)
+	Double_t degconv = pi/180.0;
+	Double_t tStep = 2.5; //10 min step in degrees
+	Double_t hour = 15.0; //1 hour in degrees
+	Double_t day = 360.0; //day in degrees
+	
+    TCanvas *skyC = new TCanvas("skyC","Skymap of Acceptance",1600,750); //new canvas for skymap
+    TGraph  *plot = new TGraph(); //for plotting galactic landmarks
+    skyC->Divide(2,1);
+    //~ TH2F *skymap = new TH2F("skymap","Acceptance Skymap", 180, -180, 180, 179, -89.5, 89.5);
+    skymapSingleAngle->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
+    skymapSingleAngle->GetYaxis()->SetTitle("Elevation Angle [degrees]");
+    skymapFull360Sweep->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
+    skymapFull360Sweep->GetYaxis()->SetTitle("Elevation Angle [degrees]");
+    skymapSingleAngle->SetStats(1);
+    skymapFull360Sweep->SetStats(1);
+    //area of cell
+    Double_t dDeltaTelescopeAzimuth=DeltaAngleAz;
+    Double_t dConversion=yDelta*dDeltaTelescopeAzimuth*pi/180.0; //multiply area of cell taking into account that we have a 360 degree FoV
+    dConversion*=1e10; //from km2 to cm2
+    //solid angle
+    dConversion*=DeltaAngleAz/180.*pi*DeltaAngle/180.*pi; //multiply area of solidangle cell
+
+    //time Do that in the sensitivity calculation. Acceptance is calculated
+    //without the observing time
+    //dConversion*=3*365*24*3600*0.20; //exposure time 3 years in seconds with 20% duty cycle
+
+   
+    //~ dConversion*=2; //because we only calculate for azimuth angles 0 to azimuth max. There are also negative azimuth values due to symmetry of the problem 
+	//~ int nbinsx = 0;
+	//~ int nbinsy = 0;
+
+    Double_t dIntegratedAcceptance=0;
+    Int_t p = 0;
+    //~ Double_t y = yMin ; //y distance from telescope where tau comes out of the ground;
+    Double_t y = 20; //y distance from telescope where tau comes out of the ground;
+    //~ cout<<"y before the loop is: "<<y<<" yMax is: "<<yMax<<" yMin is: "<<yMin<<" yDelta is: "<<yDelta<<endl;
+    while(y<yMax) //loop over distance to telescope
+     {
+       //cout<<"Distance from Detector: "<<y<<endl;
+       //calculate for given elevation the length of the trajectory through earth.
+       Double_t dAcceptance=0.0;
+
+       //~ Double_t MaxAzimuth = dMaxCherenkovAzimuthAngle;
+       Double_t MaxAzimuth = 180.0;
+       if( bFluorescence || (bCombined && y<dMaxFluorescenceDistance) ) // so we can make full use of fluoresence events
+         MaxAzimuth = 180.0;
+		MaxElevation = 40.0;
+       //~ Double_t elevation=DeltaAngle*0.5;    
+       Double_t elevation=0;    
+       //~ while(elevation<MaxElevation) //loop over elevation
+       for(int elv = 0; elv <= (int)(MaxElevation * 10); elv++)
+         {
+			 elevation = elv/10.0;
+            Double_t dWeightForTriggeredAzimuth = sin(elevation/180.*pi)*y;
+            Double_t azimuth = 0;
+            //~ while(azimuth<MaxAzimuth) // loop over azimuth
+            for(int azi = 0; azi <= (int)(MaxAzimuth * 10); azi++)
+              {
+				  azimuth = azi/10.0;
+				  //~ cout<<"azi: "<<azimuth<<endl;
+
+                 if(azimuth>MaxAzimuth && y>dMaxFluorescenceDistance)
+                  cout<<" Azimuth:" <<azimuth<<" should not be here "<<endl;
+
+                 Double_t dEarth = DistanceThroughEarth(y,elevation,azimuth);
+                 //cout<<"   length of trajectory in Earth: "<<dEarth<<" km"<<endl;
+
+                 //cout<<dEarth<<"  "<<dMinEnu<<"  "<<dMaxEnu<<endl; 
+                 GetTauDistribution(hTau,dEarth,dMinEnu,dMaxEnu);                
+
+               Double_t dDeltaAcceptance=0;
+
+               //Calculate probability that taus with E convert before they are 150 km away from detector when they make it out of the earth. 
+               //150km is for an angle of 5 degrees assuming 10 degree opening angle. If the angle is free the distance of closest approach depends on
+               // where the tau comes out of the earth and under what angle (vertical and horizontal. 
+               //That is probably dependend on the initial nu energy
+               Double_t dP = 0;
+                //     if(elevation>0.5 && elevation<1 && azimuth>9 && azimuth<9.2)
+               for(int i=0;i<hTau->GetNbinsX();i++)
+                  {
+//cout<<dMinEnu<<"  "<<dMaxEnu<<endl;
+//cout<<"taus cont: "<<hTau->GetBinContent(i+1)<<endl;
+                     if(hTau->GetBinContent(i+1)>0)
+                      {
+                        Double_t dPFluorescence = 0.0;
+                        Double_t dPCherenkov = 0.0;
+                         //cout<<bFluorescence<<" "<<bCombined<<"  "<<y<<"<"<<dMaxFluorescenceDistance<<endl;
+                        if( bFluorescence || (bCombined && y<dMaxFluorescenceDistance) )
+                           dPFluorescence = PDecayFluorescence(hTau->GetBinCenter(i+1),y,elevation,azimuth);
+                        if( (!bFluorescence || bCombined) && azimuth<dMaxCherenkovAzimuthAngle  )
+                            dPCherenkov = PDecay(hTau->GetBinCenter(i+1),y,elevation,azimuth);
+
+                        if(bCombined)
+                         dP = dPFluorescence > dPCherenkov ? dPFluorescence : dPCherenkov;
+                        else if(bFluorescence)
+                          dP = dPFluorescence;
+                        else
+                          dP = dPCherenkov;
+                        dDeltaAcceptance+=hTau->GetBinContent(i+1)*dP;
+                        //dDeltaAcceptance+=hTau->GetBinContent(i+1); //use above
+                        hTriggeredAzimuthAngles->Fill(azimuth,hTau->GetBinContent(i+1)*dP*dWeightForTriggeredAzimuth);
+                       }
+                     //if(hTau->GetBinContent(i+1)*dP>0 )
+                     //cout<<hTau->GetBinCenter(i+1)<<"  "<<hTau->GetBinContent(i+1)<<" y:  "<<y<<"  el: "<<elevation<<" az: "<<azimuth<<" dp: "<<dP<<" dDeltaAccept: "<<dDeltaAcceptance<<" prod: "<<hTau->GetBinContent(i+1)*dP<<endl;
+                  }
+                  					
+                  if(azimuth != 0.0) {
+					//~ if(dDeltaAcceptance == 0.0)
+						//~ skymapSingleAngle->Fill(azimuth, (-1 * elevation), -0.0001);
+					//~ else
+						skymapSingleAngle->Fill(azimuth, (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion);
+					//~ skymapFull360Sweep->Fill(azimuth, (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion);
+				}
+				//~ if(dDeltaAcceptance == 0.0)
+					//~ skymapSingleAngle->Fill((-1 * azimuth), (-1 * elevation), -0.0001);
+				//~ else
+					skymapSingleAngle->Fill((-1 * azimuth), (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion);
+				//~ skymapFull360Sweep->Fill((-1 * azimuth), (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion);
+				
+                  //~ cout<<"Azimuth: "<<azimuth<<" degrees, Elevation: "<<elevation<<" degrees, Acceptance: "<<dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion<<endl;
+				
+                  
+               if(dDeltaAcceptance<1e-20 && y>50) //won't get any more acceptance. The >60 is to make sure we do not miss fluorescence events whic can be seen from the back
+                   break;
+
+               //~ dAcceptance+=dDeltaAcceptance*sin(elevation/180.*pi); //projection of area cell to trajectory
+               //~ skymapFull360Sweep->Fill(azimuth, (-1)* elevation, dAcceptance*y*dConversion);
+               //~ skymapFull360Sweep->Fill((-1) * azimuth, (-1)* elevation, dAcceptance*y*dConversion);
+               //   cout<<"distance "<<y<<" prob"<<dDeltaAcceptance<<" elevation  "<<elevation<<endl;
+               // Skymap stuff goes here (before the azimuth gets updated).
+				
+               //~ cout<<"right ascent: "<<ra<<" decl: "<<dec<<endl;
+               //~ skymap->Draw("aitoff");
+               //~ skyC->Modified();
+               //~ skyC->Update();
+               //~ cout<<" Azimuth:" <<azimuth<<endl;
+                 //~ cout<<"Azi: "<<azimuth<<", Elv: "<<elevation<<endl;
+               //~ azimuth+=DeltaAngleAz;
+				//~ nbinsx++;
+               //Add absorption in the atmosphere between shower and observer
+               //Go over target area and calculate acceptance angle for each dA. Integrate over energy spectrum of taus coming out of the earth at that point. multiplied with detection efficiency(absorption).
+             }//finished looping over all azimuth angles
+             
+               //~ elevation+=DeltaAngle;    
+               //~ nbinsy++;
+             //cout<<azimuth<<"  "<<dAcceptance<<endl;
+           //multiply with dOmega  DeltaAngle*DeltaAngle
+           //~ cout<<azimuth<<" azi"<<endl;
+        }//finished looping over all elevation angles
+    //dAcceptance*=yDelta*DeltaAngle/180*pi*y; //multiply area of cell
+    //dAcceptance*=DeltaAngle/180*pi*DeltaAngle/180*pi; //multiply area of solidangle cell
+    dAcceptance*=y; //multiply with area of cell (note that the yDelta*DeltaAngle/180*pi is included in dConversion
+    dIntegratedAcceptance+=dAcceptance;
+    
+    grDiffAcceptance->SetPoint(p,y,dAcceptance*dConversion); 
+    p++;
+    cout<<"distance: "<<y<<" differ. acceptance "<<(dAcceptance*dConversion)<<" integr. acceptance.: "<<(dIntegratedAcceptance*dConversion)<<endl; 
+    cout<<dAcceptance<<"  "<<dConversion<<endl;
+    y+=yDelta;
+    if(dAcceptance<1e-10 && y>50) //no sense to increase in distance if we can't see any showers now
+       break;
+       break;
+  }//end looping over distances
+//~ for(int xBinWidth = skymapSingleAngle->GetNbinsX(); xBinWidth > 0; xBinWidth--){
+	//~ for(int xbin = 1; xbin <= skymapSingleAngle->GetNbinsX() - xBinWidth + 1; xbin++){
+		//~ for(int ybin = 1; ybin <= skymapSingleAngle->GetNbinsY(); ybin++){
+			//~ Double_t comboBin = skymapFull360Sweep->GetBinContent(xbin, ybin);
+			//~ comboBin += skymapSingleAngle->GetBinContent((xBinWidth + xbin) - 1, ybin);
+			//~ skymapFull360Sweep->SetBinContent(xbin, ybin, comboBin);
+		//~ }
+	//~ }
+	//~ cout<<xBinWidth<<endl;
+//~ }
+
+//~ for(int xBinWidth = 1; xBinWidth < skymapSingleAngle->GetNbinsX(); xBinWidth++){
+	//~ for(int xbin = skymapSingleAngle->GetNbinsX(); xbin >= skymapSingleAngle->GetNbinsX() - xBinWidth + 1; xbin--){
+		//~ for(int ybin = 1; ybin <= skymapSingleAngle->GetNbinsY(); ybin++){
+			//~ Double_t comboBin = skymapFull360Sweep->GetBinContent(xbin, ybin);
+			//~ comboBin += skymapSingleAngle->GetBinContent(xbin - skymapSingleAngle->GetNbinsX() + xBinWidth, ybin);
+			//~ skymapFull360Sweep->SetBinContent(xbin, ybin, comboBin);
+		//~ }
+	//~ }
+	//~ cout<<xBinWidth<<endl;
+//~ }
+
+for(int yBins = 1; yBins <= skymapSingleAngle->GetNbinsY(); yBins++){
+	Double_t comboBin = 0;
+	for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+		comboBin += skymapSingleAngle->GetBinContent(xBins, yBins);
+	for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+		skymapFull360Sweep->SetBinContent(xBins, yBins, comboBin);
+	//~ cout<<yBins<<endl;
+}
+
+  //~ skymapFull360Sweep->Add(skymapSingleAngle);
+//~ skymapSingleAngle->Fill(0.0,0.0, -0.1);
+  //~ skymapFull360Sweep->Fill(0.0,10.1, -10);
+  //~ cout<<"orgin: "<<skymapSingleAngle->GetBinContent(0.0, 0.0)<<endl;
+  //~ cout<<"peak: "<<skymapSingleAngle->GetBinContent(65.0, -1.0)<<endl;
+  //~ cout<<"nx: "<<nbinsx<<" ny: "<<nbinsy<<endl;
+  skyC->cd(1);
+  gPad->SetLogz(1);
+  skymapSingleAngle->GetXaxis()->SetTitle("Azimuth [deg]");
+  skymapSingleAngle->GetYaxis()->SetTitle("Elevation [deg]");
+skymapSingleAngle->Draw("COLZ");
+skyC->cd(2);
+gPad->SetLogz(1);
+skymapFull360Sweep->GetXaxis()->SetTitle("Azimuth [deg]");
+skymapFull360Sweep->GetYaxis()->SetTitle("Elevation [deg]");
+skymapFull360Sweep->Draw("COLZ");
+
+//projection onto the sky
+
+//~ for(int xBins = 1; xBins <= skymapFull360Sweep->GetNbinsX(); xBins++) {
+	//~ Double_t az = xBins * 0.1 - 180.1;
+	//~ for(int yBins = 1; yBins <= skymapFull360Sweep->GetNbinsY(); yBins++) {
+		//~ Double_t alt = yBins * 0.1 - 90.1;
+		//~ Double_t dec = asin(sin(alt * degconv) * sin(latitude * degconv) + cos(alt * degconv) * cos(latitude * degconv) * cos(az * degconv)) * (180.0 / pi);
+		//~ Double_t ra = atan2(sin((az + 180.0) * degconv), (cos((az + 180.0) * degconv) * sin(latitude * degconv) + tan(alt * degconv) * cos(latitude * degconv))) * (180.0 / pi);
+		//~ ra = LST - ra;
+		//~ if(ra > 180.0)
+			//~ ra = ra - 360.0;
+		//~ skymapFullProjection->Fill(ra, dec, skymapFull360Sweep->GetBinContent(xBins, yBins));
+	//~ }
+//~ }
+
+//~ for(int t = 1; t <= (int)(180.0 / tStep); t++) {
+	//~ for(int r = -180 * 10; r <= 180 * 10; r++) {
+		//~ Double_t ra = r / 10.0;
+		//~ for(int d = -90 * 10; d <= 90 * 10; d++) {
+			//~ Double_t dec = d / 10.0;
+			//~ Double_t az = (atan2(sin((LST - ra) * degconv), cos((LST - ra) * degconv) * sin(latitude * degconv) - tan(dec * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+			//~ Double_t alt = asin(sin(latitude * degconv) * sin(dec * degconv) + cos(latitude * degconv) * cos(dec * degconv) * cos((LST - ra) * degconv)) * 180 / pi;
+			//~ if(az > 180.0)
+				//~ az = az - 360.0;
+			//~ if(az < -180.0)
+				//~ az = az + 360.0;
+			//~ int xBin = (int)((az + 180.1) * 10);
+			//~ int yBin = (int)((alt + 90.1) * 10);
+			//~ skymapFullProjection->Fill(ra, dec, skymapFull360Sweep->GetBinContent(xBin, yBin));
+		//~ }
+	//~ }
+	//~ LST += tStep;
+	//~ if(LST > 360.0)
+		//~ LST = LST - 360;
+//~ }
+
+ifstream in;
+in.open("/home/bep/Documents/school/college/gt/y3/s2/research/trinity/l.txt"); //open xephem file
+
+Double_t totalT, totalAcc;
+
+if (in.is_open()) { //if the xephem file is open
+	string sTimeS, rTimeS, rTimeM, sTimeM, phM;
+	//~ int tens, ones, hour, min;
+	Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, resT, endT;
+	bool nestNone = false, nestSun = false, nestBoth = false;
+	
+	while(in.good()) {
+		in >> sTimeS >> rTimeS >> rTimeM >> sTimeM >> phM;
+		
+		//~ setTimeSun = ((sTimeS[0] - '0') * 10 + (sTimeS[1] - '0')) / 24.0 * day + ((sTimeS[3] - '0') * 10 + (sTimeS[4] - '0')) / 1440.0 * day;
+		//~ riseTimeSun = (rTimeS[0] - '0') / 24.0 * day + ((rTimeS[2] - '0') * 10 + (rTimeS[3] - '0')) / 1440.0 * day;
+		
+		setTimeSun = stod(sTimeS);
+		riseTimeSun = stod(rTimeS);
+		riseTimeMoon = stod(rTimeM);
+		setTimeMoon = stod(sTimeM);
+		phaseMoon = stod(phM);
+		
+		//~ if(setTimeSun > riseTimeSun)
+			//~ deltaT = (360.0 - setTimeSun) + riseTimeSun;
+		//~ else 
+			//~ deltaT = riseTimeSun - setTimeSun;
+		
+		//~ totalT += deltaT;
+		//~ LST = setTimeSun;
+		
+		nestNone = false;
+		nestSun = false;
+		nestBoth = false;
+		
+		if(phaseMoon < 0.3) {
+			if(setTimeSun > riseTimeSun)
+				deltaT = (360.0 - setTimeSun) + riseTimeSun;
+			else
+				deltaT = riseTimeSun - setTimeSun;
+			LST = setTimeSun;
+		} else {
+			if( (riseTimeSun > setTimeSun) && (setTimeMoon > riseTimeMoon) ) { //both don't cross 0hr
+				if( (riseTimeMoon < setTimeSun) && (setTimeMoon < setTimeSun) && (setTimeMoon < riseTimeSun) ){
+					LST = setTimeMoon;
+					deltaT = riseTimeSun - setTimeMoon;
+					endT = riseTimeSun;
+				} else if( (riseTimeMoon > setTimeSun) && (setTimeMoon > riseTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = riseTimeMoon - setTimeSun;
+					endT = riseTimeMoon;
+				} else if( (riseTimeMoon > setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = (riseTimeMoon - setTimeSun) + (riseTimeSun - setTimeMoon);
+					nestNone = true;
+					endT = riseTimeSun;
+				} else if( (riseTimeMoon < setTimeSun && setTimeMoon < setTimeSun) || (riseTimeMoon > riseTimeSun && setTimeMoon > riseTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = riseTimeSun - setTimeSun;
+					endT = riseTimeSun;
+				} else { deltaT = 0; }
+			} else if( (riseTimeSun < setTimeSun) && (setTimeMoon > riseTimeMoon) ) { //only sun crosses 0hr (impossible for moon to cover full night)
+				if( (riseTimeMoon < setTimeSun) && (setTimeMoon > setTimeSun) ) {
+					LST = setTimeMoon;
+					deltaT = (360. + riseTimeSun) - setTimeMoon;
+					endT = riseTimeSun;
+				} else if( (riseTimeSun > riseTimeMoon) && (riseTimeSun < setTimeMoon) ) {
+					LST = setTimeSun;
+					deltaT = (360. + riseTimeMoon) - setTimeSun;
+					endT = riseTimeMoon;
+				} else if( (riseTimeMoon > setTimeSun && setTimeMoon < 360.) || (riseTimeMoon < riseTimeSun && setTimeMoon < riseTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = (riseTimeSun + 360. - setTimeSun) - (setTimeMoon - riseTimeMoon);
+					nestSun = true;
+					endT = riseTimeSun;
+				} else if( (riseTimeMoon < setTimeSun && setTimeMoon < setTimeSun) || (riseTimeMoon > riseTimeSun && setTimeMoon > riseTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = (360. + riseTimeSun) - setTimeSun;
+					endT = riseTimeSun;
+				} else { cout<<"you fucked up somewhere"<<endl; } //should never happen
+			} else if( (riseTimeSun > setTimeSun) && (setTimeMoon < riseTimeMoon) ) { //only moon crosses 0hr
+				if( ((setTimeSun + 360.) > riseTimeMoon) && (setTimeMoon > setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+					LST = setTimeMoon;
+					deltaT = riseTimeSun - setTimeMoon;
+					endT = riseTimeSun;
+				} else if( (riseTimeMoon < riseTimeSun) && (riseTimeSun < (setTimeMoon + 360.)) && (riseTimeMoon > setTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = riseTimeMoon - setTimeSun;
+					endT = riseTimeMoon;
+				} else if( (riseTimeMoon > riseTimeSun) && (setTimeMoon < setTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = riseTimeSun - setTimeSun;
+					endT = riseTimeSun;
+				} else { deltaT = 0; }
+			} else if ( (riseTimeSun < setTimeSun)  && (setTimeMoon < riseTimeMoon) ) { //both cross 0 hr
+				if( (riseTimeMoon > setTimeSun) && (riseTimeSun < setTimeMoon) ) {
+					LST = setTimeSun;
+					deltaT = riseTimeMoon - setTimeSun;
+					endT = riseTimeMoon;
+				} else if( (riseTimeMoon < setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+					LST = setTimeMoon;
+					deltaT = riseTimeSun - setTimeMoon;
+					endT = riseTimeSun;
+				} else if( (setTimeSun < riseTimeMoon) && (setTimeMoon < riseTimeSun) ) {
+					LST = setTimeSun;
+					deltaT = (riseTimeSun + 360. - setTimeSun) - (setTimeMoon + 360. - riseTimeMoon);
+					nestBoth = true;
+					endT = riseTimeSun;
+				} else { deltaT = 0; }
+			}
+		}
+		
+		totalT += deltaT;
+		
+		for(int i = 0; i < (int)(deltaT / tStep); i++) {
+			for(int r = -180; r <= 180; r++) {
+				//~ Double_t ra = r;
+				for(int d = -90; d <= 90; d++) {
+					Double_t dec = asin(sin(d * degconv) * sin(27.1284 * degconv) + cos(d * degconv) * cos(27.1284 * degconv) * cos((122.9320 - r) * degconv)) * 180 / pi;
+					Double_t ra = (atan2((cos(d * degconv) * sin((122.932 - r) * degconv)), (sin(d * degconv) * cos(27.1284 * degconv) - cos(d * degconv) * sin(27.1284 * degconv) * cos((122.9320 - r) * degconv))) * 180 / pi) + 192.8595;
+					if(ra > 180)
+						ra = ra - 360.;
+					if(ra < -180)
+						ra = ra + 360.;
+					Double_t az = (atan2(sin((LST - ra) * degconv), cos((LST - ra) * degconv) * sin(latitude * degconv) - tan(dec * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+					Double_t alt = asin(sin(latitude * degconv) * sin(dec * degconv) + cos(latitude * degconv) * cos(dec * degconv) * cos((LST - ra) * degconv)) * 180 / pi;
+					if(az > 180.0)
+						az = az - 360.0;
+					if(az < -180.0)
+						az = az + 360.0;
+					int xBin = (int)((az + 180.1) * 10);
+					int yBin = (int)((alt + 90.1) * 10);
+					if( !(nestNone && LST > riseTimeMoon && LST < setTimeMoon) && 
+						!(nestSun && LST > riseTimeMoon && LST < setTimeMoon) && 
+						!(nestBoth && ( (LST > riseTimeMoon && LST < 360.) || (LST > 0 && LST < setTimeMoon) )) ) 
+						{ skymapFullProjection->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin)); }
+						//~ { skymapFullProjection->Fill((1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin)); }
+				}
+			}
+			LST += tStep;
+			if(LST > 360.0)
+				LST -= 360.0;
+		}
+		
+		if(LST > endT)
+			resT = endT + 360. - LST;
+		else
+			resT = endT - LST;
+		
+		if(resT > (tStep / 2.0) && deltaT != 0.0) {
+			LST += tStep;
+			if(LST > 360.0)
+				LST -= 360.0;
+			totalT += tStep;
+			for(int r = -180; r <= 180; r++) {
+					//~ Double_t ra = r;
+					for(int d = -90; d <= 90; d++) {
+						Double_t dec = asin(sin(d * degconv) * sin(27.1284 * degconv) + cos(d * degconv) * cos(27.1284 * degconv) * cos((122.9320 - r) * degconv)) * 180 / pi;
+						Double_t ra = (atan2((cos(d * degconv) * sin((122.932 - r) * degconv)), (sin(d * degconv) * cos(27.1284 * degconv) - cos(d * degconv) * sin(27.1284 * degconv) * cos((122.9320 - r) * degconv))) * 180 / pi) + 192.8595;
+						if(ra > 180)
+							ra = ra - 360.;
+						if(ra < -180)
+							ra = ra + 360.;
+						Double_t az = (atan2(sin((LST - ra) * degconv), cos((LST - ra) * degconv) * sin(latitude * degconv) - tan(dec * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+						Double_t alt = asin(sin(latitude * degconv) * sin(dec * degconv) + cos(latitude * degconv) * cos(dec * degconv) * cos((LST - ra) * degconv)) * 180 / pi;
+						if(az > 180.0)
+							az = az - 360.0;
+						if(az < -180.0)
+							az = az + 360.0;
+						int xBin = (int)((az + 180.1) * 10);
+						int yBin = (int)((alt + 90.1) * 10);
+						skymapFullProjection->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin));
+						//~ skymapFullProjection->Fill((1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin));
+					}
+				}
+		//~ break;
+		}
+	}
+} else cout << "Unable to open file"; 
+
+for(int i = 1; i <= skymapFullProjection->GetNbinsX(); i++) {
+	for(int j = 1; j <= skymapFullProjection->GetNbinsY(); j++)
+		totalAcc += skymapFullProjection->GetBinContent(i, j);
+}
+
+cout<<"Total observation time: "<<totalT * (24.0 / 360.0)<<" hours."<<endl;
+cout<<"Total Acceptance over "<<totalT * (24.0 / 360.0)<<" hours: "<<totalAcc<<endl;
+cout<<"Duty Cycle: "<<totalT * (1 / 360.) * (1 / 360.) * 100.<<" percent"<<endl;
+
+TCanvas *skyProjC = new TCanvas("skyProjC","Skymap Projection",1500,750);
+
+
+TMarker *galMarks[10];
+
+for(int i = 0; i < 10; i++) {
+	galMarks[i] = new TMarker(0.,0., 43);
+	galMarks[i]->SetMarkerSize(1.5);
+}
+
+galMarks[0]->SetX(0); //galactic center
+galMarks[0]->SetY(0);
+
+galMarks[1]->SetX(155.711); //TXS
+galMarks[1]->SetY(-28.0311);
+
+galMarks[2]->SetX(-53.1613); //MRK 501
+galMarks[2]->SetY(40.6421);
+
+galMarks[3]->SetX(-75.9516); //MRK 421
+galMarks[3]->SetY(81.5564);
+
+galMarks[4]->SetX(32.5099); //Virgo
+galMarks[4]->SetY(60.2204);
+
+galMarks[5]->SetX(-75.9174); //cygnus A
+galMarks[5]->SetY(6.20106);
+
+galMarks[6]->SetX(48.4862); // Cen A
+galMarks[6]->SetY(20.0392);
+
+galMarks[7]->SetX(123); //Auger Dipole
+galMarks[7]->SetY(-8);
+
+galMarks[8]->SetX(83.9959); //Fornax
+galMarks[8]->SetY(-66.0235);
+
+galMarks[9]->SetX(-152); //TA Hotspot
+galMarks[9]->SetY(47);
+
+TText *labels[10];
+	
+for(int i = 0; i < 10; i++) {
+	labels[i] = new TText();
+	labels[i]->SetTextSize(20);
+	labels[i]->SetTextFont(43);
+	labels[i]->SetTextAlign(22);
+}
+
+labels[0]->SetText(-29, -5, "Galactic Center");
+labels[1]->SetText(-55., 5.0, "Cygnus A");
+labels[2]->SetText(-35., 35., "MRK 501");
+labels[3]->SetText(-97., 85., "MRK 421");
+labels[4]->SetText(-125., 45., "TA Hotspot");
+labels[5]->SetText(36., 55, "Virgo");
+labels[6]->SetText(48, 25, "Cen A");
+labels[7]->SetText(150, -10, "Auger Dipole");
+labels[8]->SetText(135, -35, "TXS 0506+056");
+labels[9]->SetText(75, -72, "Fornax");
+
+gPad->SetLogz(0);
+gStyle->SetPalette(56);
+skyProjC->SetRightMargin(0.2);
+skymapFullProjection->GetXaxis()->SetTitle("Galactic Longitude [deg]");
+skymapFullProjection->GetYaxis()->SetTitle("Galactic Latitude [deg]");
+skymapFullProjection->GetZaxis()->SetTitle("Acceptance [cm^{2}]");
+skymapFullProjection->Draw("z aitoff");
+
+TPad *pad2 = new TPad("pad2","",0,0,1,1);
+pad2->SetFillStyle(4000);
+pad2->SetFillColor(0);
+pad2->SetBorderSize(0);
+pad2->SetFrameBorderMode(0);
+pad2->SetFrameLineColor(0); 
+pad2->SetFrameBorderMode(0);
+pad2->Draw();
+pad2->cd();
+pad2->Range(-231,-111.875,283,111.875);
+
+for(int i = 0; i < 10; i++) {
+	galMarks[i]->Draw();
+	labels[i]->Draw();
+}
+
 return (dIntegratedAcceptance*dConversion);
 }
 
@@ -1938,7 +2477,9 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
     while(dLogE<=logEmax)
        {
           bMonoNu = kFALSE; //calculate the acceptance averaged over Enu bin
-          Double_t dAcceptance = CalculateAcceptance(dLogE-dHalfEnergyBinWidth,dLogE+dHalfEnergyBinWidth,grDiffAcceptance,hTau);
+          //~ Double_t dAcceptance = CalculateAcceptance(dLogE-dHalfEnergyBinWidth,dLogE+dHalfEnergyBinWidth,grDiffAcceptance,hTau);
+          //~ Double_t dAcceptance = CalculateAcceptance(9.0,9.1,grDiffAcceptance,hTau);
+          Double_t dAcceptance = CalculateAcceptance2(9.0,9.1,grDiffAcceptance,hTau);
 
           if(dAcceptance>1)
            {
@@ -1952,7 +2493,7 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
 
               //Calculate the Sensitivity as done by the Nu Community
               bMonoNu = kTRUE; //calculate the acceptance at Enu bin center
-              dAcceptance = CalculateAcceptance(dLogE-dHalfEnergyBinWidth,dLogE+dHalfEnergyBinWidth,grDiffAcceptance,hTau);
+              //~ dAcceptance = CalculateAcceptance(dLogE-dHalfEnergyBinWidth,dLogE+dHalfEnergyBinWidth,grDiffAcceptance,hTau);
               grAcceptanceMonoEnergy->SetPoint(n,pow(10,dLogE),dAcceptance);
               bMonoNu = kFALSE;
               dnuFnu = 3 * 2.44 / dAcceptance / dExposure / log(10) / (2*dHalfEnergyBinWidth) * pow(10,dLogE); //2.44 is from Feldman Cousin 90% confidence upper limit
@@ -1976,6 +2517,7 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
               n++;
             }
           dLogE+=dLogEnergyStep;
+          break;
        }
 
 
@@ -2029,6 +2571,130 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
        cout<<dE[i]<<"  "<<dF[i]<<endl;;
      }
 
+}
+
+void CalculateSkyExposure(TH1D *hTau)
+{
+
+    Double_t dLogEnergyStep = 0.2; //0.2
+    Double_t dHalfEnergyBinWidth =1/2.; //in log was 1/2
+    Double_t logEmin = 7; //7
+    Double_t logEmax = 11; //11
+
+    bCombined = kTRUE;
+    yMin = 5; //5
+    yMax = 500; //500
+    yDelta = 5; //5
+    MaxElevation = 10; //elevation angle (determines path through Earth;
+    //~ DeltaAngle = 0.05; //steps in azimuth and elevation 
+    DeltaAngle = 0.1; //steps in azimuth and elevation 
+
+    iConfig = 2; //telescope altitude
+  
+    //exposure
+    Double_t dExposure=3*365*24*3600*0.20; //exposure time 3 years in seconds with 20% duty cycle
+
+    Double_t dFoV = 2;  //test 0, 1, 2, 10
+    tanFoV = tan(dFoV/180.*pi);
+    //dFoVBelow = asin(REarth/(REarth+DetectorAltitude[iConfig]));
+    dFoVBelow =  3/180.*pi; 
+    iMirrorSize = 2;
+    dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
+
+    dMinLength = 0.3; //mimnimum length a shower has to have in the camera, in degrees. This is a conservative estimate because it assumes that the shower starts at a distance l from the detector, which is not necessarily tru for showers with shallow elevation angles.
+    TGraph *grDiffAcceptance = new TGraph();
+
+    TGraph *grSensitivity = new TGraph();
+
+
+    TCanvas *cDiffSensitivity = new TCanvas("cDiffSensitivity","Differential Sensitivity",750,500);
+    cDiffSensitivity->Draw();
+    cDiffSensitivity->SetLogy();
+    cDiffSensitivity->SetLogx();
+
+    TGraph *grAcceptance = new TGraph();
+    TCanvas *cAcceptance = new TCanvas("cAcceptance","Acceptance",750,500);
+    cAcceptance->Draw();
+    cAcceptance->SetLogy();
+    cAcceptance->SetLogx();
+  
+    TCanvas *cTriggeredAzimuthAngles = new TCanvas("cTriggeredAzimuthAngles","Triggered Azimuth Angles",750,500);
+    hTriggeredAzimuthAngles->Draw("HIST");
+
+  
+
+
+    //Move in steps from lowest to highes energy
+    Double_t dLogE = logEmin;
+    Int_t n=0;
+    while(dLogE<=logEmax)
+       {
+          //~ Double_t dAcceptance = CalculateAcceptance2(dLogE-dHalfEnergyBinWidth,dLogE+dHalfEnergyBinWidth,grDiffAcceptance,hTau);
+          Double_t dAcceptance = CalculateAcceptance2(7,9.0000001,grDiffAcceptance,hTau);
+    
+
+
+          if(dAcceptance>1)
+           {
+              //Double_t dEIndexed = pow(10,-dLogE*nuIndex);
+
+              Double_t dnuFnu = 3 * pow(10,dLogE*2) / dAcceptance / dExposure / (pow(10,dLogE+dHalfEnergyBinWidth)- pow(10,dLogE-dHalfEnergyBinWidth));
+              cout<<"Energy "<<dLogE-dHalfEnergyBinWidth<<" to "<<dLogE+dHalfEnergyBinWidth<<" acceptance:  "<<dAcceptance<<" nuFnu: "<<dnuFnu<<" for power law with index -"<<nuIndex<<endl;
+              grSensitivity->SetPoint(n,pow(10,dLogE),dnuFnu);
+              cDiffSensitivity->cd();
+              grSensitivity->Draw("alp");
+              cDiffSensitivity->Modified();
+              cDiffSensitivity->Update();
+
+              grAcceptance->SetPoint(n,pow(10,dLogE),dAcceptance);
+              cAcceptance->cd();
+              grAcceptance->Draw("alp");
+              cAcceptance->Modified();
+              cAcceptance->Update();
+
+              cTriggeredAzimuthAngles->cd();
+              cTriggeredAzimuthAngles->Modified();
+              cTriggeredAzimuthAngles->Update();
+
+              n++;
+            }
+          dLogE+=dLogEnergyStep;
+          break;
+       }
+
+  grSensitivity->SetLineWidth(3);
+  grSensitivity->SetLineColor(kBlue+3);
+  grSensitivity->GetXaxis()->SetTitle("energy [GeV]");
+  grSensitivity->GetYaxis()->SetTitle("E^{2} dN/dE [ GeV cm^{-2} s^{-1} sr^{-1} ]");
+  grSensitivity->GetYaxis()->SetTitleSize(0.04);
+  grSensitivity->GetYaxis()->SetLabelSize(0.04);
+  grSensitivity->GetXaxis()->SetTitleSize(0.04);
+  grSensitivity->GetXaxis()->SetLabelSize(0.04);
+
+  grAcceptance->SetLineWidth(3);
+  grAcceptance->SetLineColor(kBlue+3);
+  grAcceptance->GetXaxis()->SetTitle("energy [GeV]");
+  grAcceptance->GetYaxis()->SetTitle("acceptance [ cm^{2} sr ]");
+  grAcceptance->GetYaxis()->SetTitleSize(0.04);
+  grAcceptance->GetYaxis()->SetLabelSize(0.04);
+  grAcceptance->GetXaxis()->SetTitleSize(0.04);
+  grAcceptance->GetXaxis()->SetLabelSize(0.04);
+
+  hTriggeredAzimuthAngles->SetLineWidth(3);
+  hTriggeredAzimuthAngles->SetLineColor(kBlue+3);
+  hTriggeredAzimuthAngles->GetYaxis()->SetTitleSize(0.04);
+  hTriggeredAzimuthAngles->GetYaxis()->SetLabelSize(0.04);
+  hTriggeredAzimuthAngles->GetXaxis()->SetTitleSize(0.04);
+  hTriggeredAzimuthAngles->GetXaxis()->SetLabelSize(0.04);
+  hTriggeredAzimuthAngles->Scale(1.0/hTriggeredAzimuthAngles->Integral(),"nosw2");
+
+  TString Filename;
+  Filename.Form("SensitivityResults/new4/DifferentialSensitivityTrinity_10TimesNSB_%ikmAboveGround_%0.0fsqrmMirror_%0.1fdegUpperFoV_%0.1fdegLowerFoV_%0.1fdegMinShowerLength.root",iConfig,dMirrorA[iMirrorSize],dFoV,dFoVBelow/pi*180.,dMinLength);
+  cDiffSensitivity->SaveAs(Filename.Data());
+  Filename.Form("SensitivityResults/new4/AcceptanceTrinity_10TimesNSB_%ikmAboveGround_%0.0fsqrmMirror_%0.1fdegUpperFoV_%0.1fdegLowerFoV_%0.1fdegMinShowerLength.root",iConfig,dMirrorA[iMirrorSize],dFoV,dFoVBelow/pi*180.,dMinLength);
+  cAcceptance->SaveAs(Filename.Data());
+  Filename.Form("SensitivityResults/new4/TriggeredAzimuthTrinity_10TimesNSB_%ikmAboveGround_%0.0fsqrmMirror_%0.1fdegUpperFoV_%0.1fdegLowerFoV_%0.1fdegMinShowerLength.root",iConfig,dMirrorA[iMirrorSize],dFoV,dFoVBelow/pi*180.,dMinLength);
+  cTriggeredAzimuthAngles->SaveAs(Filename.Data());
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -2168,6 +2834,7 @@ bFluorescence = kFALSE;
 //
 //CalculateIntegralSensitivity(hTau);
 CalculateDifferentialSensitivity(hTau);
+//~ CalculateSkyExposure(hTau);
 //
 
 /*
