@@ -2812,21 +2812,20 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	latitude = 38.52028; //lat of frisco peak, utah
 	tStep = 2.5; //10 min step in degrees
 	yMin = 20; //min distance from telescope where tau comes out of the ground in km
-	yMax = 21;
+	yMax = 150;
 	DeltaAngleAz = 0.1; //azimuth angle step
 	DeltaAngle = 0.1; //elevation angle step
 	MaxAzimuth = 180.; //max azi angle
 	MaxElevation = 40; //max elv angle 
 	bCombined = kTRUE; //both flor and cher events considered
-	Double_t logEmin = 9.0; //min energy
-    Double_t logEmax = 9.1; //max energy
+	Double_t logEmin = 2.0; //min energy log (1e2 GeV)
+    Double_t logEmax = 9.0; //max energy log (1 EeV)
     Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-	Double_t spectralf = 2.2e-1;
-	Double_t flux = 1.6e-12;
-	Double_t DeltaEnu = 0.1; //logscale
-	Double_t specIndex = 0;
-	int nEnuSteps = (0.0001+logEmax - logEmin)/DeltaEnu;
+	Double_t Enaught = 10000;
+	Double_t Fnaught = 1.6e-18;
+	//~ Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax
+	Double_t normInverse = 1; 
 	
 	//values from differential sensitivity calculations
     yDelta = 5.0; //5
@@ -2837,16 +2836,6 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     iMirrorSize = 2;
     dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
     dMinLength = 0.3;
-	
-	Double_t eng = pow(10, logEmin);
-	for(int i = 0; i < nEnuSteps; i++)
-	{
-		specIndex += pow(eng, -nuIndex) * DeltaEnu;
-		eng += pow(10, log10(eng) + DeltaEnu);
-	}
-	
-	cout<<"specindex: "<<specIndex<<endl;
-	cout<<"steps: "<<nEnuSteps<<endl;
 	
 	TCanvas *skyC = new TCanvas("skyC","Skymap of Acceptance",1600,750); //new canvas for horizontal skymaps
 	TMarker *galMarks[10];
@@ -2915,7 +2904,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	gPad->SetLogz(1);
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
-	in.open("txsflare.txt"); //open ephem file
+	in.open("flarecomp.txt"); //open ephem file
 	//~ gStyle->SetPalette(56);
 	//~ return;//testing
 	Double_t totalT = 0, totalAcc = 0;
@@ -3092,7 +3081,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 							!(nestBoth && ( (LST > riseTimeMoon && LST < 360.) || (LST > 0 && LST < setTimeMoon) ) ) ) 
 							{ 
 								skymapProjEq->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240); //240 sec = 1 degree of RA
-								//~ nuevents->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240 * specIndex * flux / pow(spectralf, -nuIndex));
+								//~ nuevents->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240 * normInverse * Fnaught / pow(Enaught, -nuIndex));
 							} 
 					}
 				}
@@ -3131,7 +3120,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		for(int i = 1; i <= skymapProjEq->GetNbinsX(); i++)
 		{
 			for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
-				nuevents->SetBinContent(i, j, skymapProjEq->GetBinContent(i, j) * specIndex * flux / pow(spectralf, -nuIndex));
+				nuevents->SetBinContent(i, j, skymapProjEq->GetBinContent(i, j) * normInverse * Fnaught / pow(Enaught, -nuIndex));
 		}
 	} else cout << "Unable to open file" << endl; 
 	
