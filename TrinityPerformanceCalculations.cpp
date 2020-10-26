@@ -2743,7 +2743,8 @@ void CalculateSkyExposure(TH1D *hTau)
 }
 
 void GetAcceptanceSingleAngle(Double_t dMinEnu, Double_t dMaxEnu, TH1D *hTau, TH2F *skymapSingleAngle1)
-{
+{	
+	//set the proper values for the energy
 	dMinEnu = pow(10,dMinEnu);
 	dMaxEnu = pow(10,dMaxEnu);
 	
@@ -2760,19 +2761,19 @@ void GetAcceptanceSingleAngle(Double_t dMinEnu, Double_t dMaxEnu, TH1D *hTau, TH
 	Double_t dEarth;
 	Double_t y = yMin;
 	
-	while(y < yMax)
+	while(y < yMax) //looping over distance from telescope w/ incrememnts of yDelta
 	{	
 		if( bFluorescence || (bCombined && y<dMaxFluorescenceDistance) )
 			MaxAzimuth = 180.0;
-		for(int elv = 0; elv <= (int)(MaxElevation / DeltaAngle); elv++)
+		for(int elv = 0; elv <= (int)(MaxElevation / DeltaAngle); elv++) //looping over elevation w/ steps of DeltaAngle
 		{
 			elevation = elv * DeltaAngle;
 			
-			for(int azi = 0; azi <= (int)(MaxAzimuth / DeltaAngleAz); azi++)
+			for(int azi = 0; azi <= (int)(MaxAzimuth / DeltaAngleAz); azi++) //looping over azimuth w/ steps of DeltaAngleAz
 			{
 				azimuth = azi * DeltaAngleAz;
 				dEarth = DistanceThroughEarth(y, elevation, azimuth);
-				GetTauDistribution(hTau,dEarth,dMinEnu,dMaxEnu);
+				GetTauDistribution(hTau,dEarth,dMinEnu,dMaxEnu); //tau distribution is calculated
 				dDeltaAcceptance = 0;
 				dP = 0;
 				for(int i=0;i<hTau->GetNbinsX();i++)
@@ -2797,13 +2798,14 @@ void GetAcceptanceSingleAngle(Double_t dMinEnu, Double_t dMaxEnu, TH1D *hTau, TH
 						dDeltaAcceptance+=hTau->GetBinContent(i+1)*dP;
 					}
 				}
+				//the acceptances are loaded into the histogram with conversion factors applied
 				if(azimuth != 0.0)
-					skymapSingleAngle1->Fill(azimuth, (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion);
+					skymapSingleAngle1->Fill(azimuth, (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion); 
 				skymapSingleAngle1->Fill((-1 * azimuth), (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion);
 				//~ cout<<dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion<<endl;
 			}
 		}
-		y += yDelta;
+		y += yDelta; //distance from telescope counter increased by yDelta
 	}
 }
 
@@ -2812,20 +2814,19 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	latitude = 38.52028; //lat of frisco peak, utah
 	tStep = 2.5; //10 min step in degrees
 	yMin = 20; //min distance from telescope where tau comes out of the ground in km
-	yMax = 150;
+	yMax = 26;
 	DeltaAngleAz = 0.1; //azimuth angle step
 	DeltaAngle = 0.1; //elevation angle step
 	MaxAzimuth = 180.; //max azi angle
 	MaxElevation = 40; //max elv angle 
 	bCombined = kTRUE; //both flor and cher events considered
-	Double_t logEmin = 2.0; //min energy log (1e2 GeV)
-    Double_t logEmax = 9.0; //max energy log (1 EeV)
+	Double_t logEmin = 6.0; //min energy log
+    Double_t logEmax = 10.0; //max energy log
     Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-	Double_t Enaught = 10000;
-	Double_t Fnaught = 1.6e-18;
-	//~ Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax
-	Double_t normInverse = 1; 
+	Double_t Enaught = 10000; //GeV from IceCube paper (100 TeV)
+	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
+	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
 	
 	//values from differential sensitivity calculations
     yDelta = 5.0; //5
@@ -2837,7 +2838,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
     dMinLength = 0.3;
 	
-	TCanvas *skyC = new TCanvas("skyC","Skymap of Acceptance",1600,750); //new canvas for horizontal skymaps
+	//new canvas for the horizontal skymaps, markers and labels for galactic landmarks
+	TCanvas *skyC = new TCanvas("skyC","Skymap of Acceptance",1600,750); 
 	TMarker *galMarks[10];
 	TMarker *galMarksSup[10];
 	TMarker *galMarksEq[10];
@@ -2846,6 +2848,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	TText *labelsEq[10];
 	TPad *pad1 = new TPad("pad1","",0,0,1,1);
 	
+	//marker initialization
 	for(int i = 0; i < 10; i++) {
 		galMarks[i] = new TMarker(0.,0., 43);
 		galMarksSup[i] = new TMarker(0.,0., 43);
@@ -2855,6 +2858,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		galMarksEq[i]->SetMarkerSize(1.5);
 	}
 
+	//label initialization
 	for(int i = 0; i < 10; i++) {
 		labels[i] = new TText();
 		labels[i]->SetTextSize(20);
@@ -2870,23 +2874,26 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		labelsEq[i]->SetTextAlign(22);
 	}
 	
+	//2D histograms for various skymaps + histogram to store number of neutrino events
 	TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle","Acceptance Skymap of Single Azimuth Angle [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
 	TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
-	TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over 10 Years [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //galactic
-	TH2F *skymapProjSuperGal = new TH2F("skymapProjSuperGal","360 FoV Projection In Supergalactic Coordinates Over 10 Years [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //supergal
-	TH2F *skymapProjEq = new TH2F("skymapProjEq","360 FoV Projection In Equatorial Coordinates Over 10 Years [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
+	TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //galactic
+	TH2F *skymapProjSuperGal = new TH2F("skymapProjSuperGal","360 FoV Projection In Supergalactic Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //supergal
+	TH2F *skymapProjEq = new TH2F("skymapProjEq","360 FoV Projection In Equatorial Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
 	TH2F *nuevents = (TH2F*)skymapProjEq->Clone("nuevents");
 	
+	//histogram formatting
 	skymapSingleAngle->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
     skymapSingleAngle->GetYaxis()->SetTitle("Elevation Angle [degrees]");
     skymapFull360Sweep->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
     skymapFull360Sweep->GetYaxis()->SetTitle("Elevation Angle [degrees]");
     skyC->Divide(2,1);
     
+    //getting the single angle acceptance according to the variables above 
     GetAcceptanceSingleAngle(logEmin, logEmax, hTau, skymapSingleAngle);
     
     
-    
+    //projecting the single angle of acceptance over a 360 degree FoV
     for(int yBins = 1; yBins <= skymapSingleAngle->GetNbinsY(); yBins++)
     {
 		Double_t comboBin = 0;
@@ -2907,8 +2914,9 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	in.open("flarecomp.txt"); //open ephem file
 	//~ gStyle->SetPalette(56);
 	//~ return;//testing
-	Double_t totalT = 0, totalAcc = 0;
 	
+	Double_t totalT = 0, totalAcc = 0;
+	//calculations for the time evolution of the horizontal skymaps over various coordinate systems
 	if (in.is_open())
 	{
 		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted; 
@@ -2917,9 +2925,9 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		bool nestNone = false, nestSun = false, nestBoth = false;
 		int nSteps;
 		
-		while(in.good())
+		while(in.good()) 
 		{
-			in >> sTimeS >> rTimeS >> rTimeM >> sTimeM >> phM;
+			in >> sTimeS >> rTimeS >> rTimeM >> sTimeM >> phM; //read from the file that contains rise and set times of moon and sun in LST as well as phase of moon
 			
 			setTimeSun = stod(sTimeS);
 			riseTimeSun = stod(rTimeS);
@@ -3064,7 +3072,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			}
 			*/
 			//~ LST = origLST;
-			
+			//evolving the horizotal skymap over time and projecting onto equatorial coordinates
 			for(int i = 0; i < nSteps; i++) { //eqatorial
 				for(int r = -180; r <= 180; r++) {
 					for(int d = -90; d <= 90; d++) {
@@ -3090,7 +3098,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 					LST -= 360.0;
 			}
 		}
-		//galactic & supergal
+		//galactic & supergal projections done w.r.t the equatorial plot after time evolution has finished
 		for(int l = -180; l <= 180; l++)
 		{
 			for(int b = -90; b <= 90; b++)
@@ -3116,7 +3124,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 				skymapProjSuperGal->Fill(-1.0 * l, b, skymapProjEq->GetBinContent(xBin, yBin));
 			}
 		}
-		
+		//applying the IceCube parameters to the time-evolved acceptance to get the number of neutrino events in each bin
 		for(int i = 1; i <= skymapProjEq->GetNbinsX(); i++)
 		{
 			for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
@@ -3129,13 +3137,16 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			totalAcc += skymapProjEq->GetBinContent(i, j);
 	}
 	
+	//printing observation time, acceptance, and duty cycle
 	cout<<"Total observation time: "<<totalT * (24.0 / 360.0)<<" hours."<<endl;
 	cout<<"Total Acceptance over "<<totalT * (24.0 / 360.0)<<" hours: "<<totalAcc<<endl;
-	cout<<"Duty Cycle: "<<totalT * (24.0 / 360.0) * (1/8760.) * 100.<<" percent"<<endl; //1 year
+	//~ cout<<"Duty Cycle: "<<totalT * (24.0 / 360.0) * (1/8760.) * 100.<<" percent"<<endl; //1 year
 	//~ cout<<"Duty Cycle: "<<totalT * (24.0 / 360.0) * (1/87600.0) * 100.<<" percent"<<endl; //10 years
 	
+	//initializing and formatting graphical elements for the galactic coordinate skymap
 	TCanvas *skyProjC = new TCanvas("skyProjC","Skymap Projection (Galactic Coordinates)",1500,750); //canvas for galactic skymap projections
 	
+	//calculations done for the gridlines of each skymap
 	float conv=TMath::Pi()/180; 
 	float la, lo, x, yy, z;
 	int Nl = 5; // Number of drawn latitudes
@@ -3169,6 +3180,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		}
 	}
 	
+	//pad and histogram formatting
 	pad1->SetFillStyle(4000);
 	pad1->SetFillColor(0);
 	pad1->SetBorderSize(0);
@@ -3251,6 +3263,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		labels[i]->Draw();
 	}
 	
+	//initializing and formatting graphical elements for the supergalactic coordinate skymap
 	TCanvas *skyProjCSuper = new TCanvas("skyProjCSuper","Skymap Projection (Supergalactic Coordinates)",1500,750); //canvas for supergalactic skymap projections
 	
 	skyProjCSuper->cd(1);
@@ -3311,6 +3324,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		galMarksSup[i]->Draw();
 		labelsSup[i]->Draw();
 	}
+	
+	//initializing and formatting graphical elements for the equatorial coordinate skymap
 	TCanvas *skyProjCEq = new TCanvas("skyProjCEq","Skymap Projection (Equatorial Coordinates)",1500,750); //canvas for equatorial skymap projections
 	
 	skyProjCEq->cd(1);
@@ -3372,6 +3387,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		labelsEq[i]->Draw();
 	}
 	
+	
+	//Printing the specific acceptances and number of neutrino events of different galactic landmarks (commented out is for cross-checking acceptances over different coordinate systems to maintain consistancy)
 	//~ cout<<"Equatorial:"<<endl;
 	cout<<"Galacitc Center Acceptance: "<<skymapProjEq->GetBinContent((int)(93.5949 + 181), (int)(-28.9362 + 91))<<endl; 
 	cout<<"TXS 0506+056 Acceptance: "<<skymapProjEq->GetBinContent((int)(-77.3581 + 181), (int)(5.69315 + 91))<<endl; 
@@ -3405,6 +3422,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	//~ cout<<"Auger Dipole Acceptance: "<<skymapFullProjection->GetBinContent((int)(125 + 181), (int)(-14 + 91))<<endl; 
 	//~ cout<<"Fornax Acceptance: "<<skymapFullProjection->GetBinContent((int)(126.161 + 181), (int)(-57.335 + 91))<<endl; 
 	//~ cout<<"TA Hotspot Acceptance: "<<skymapFullProjection->GetBinContent((int)(-178 + 181), (int)(40 + 91))<<endl; 
+	
+	//printing the number of neutrino events in each source of interest
 	cout<<"Galacitc Center Events: "<<nuevents->GetBinContent((int)(93.5949 + 181), (int)(-28.9362 + 91))<<endl; 
 	cout<<"TXS 0506+056 Events: "<<nuevents->GetBinContent((int)(-77.3581 + 181), (int)(5.69315 + 91))<<endl; 
 	cout<<"MRK 501 Events: "<<nuevents->GetBinContent((int)(106.532 + 181), (int)(39.7602 + 91))<<endl; 
