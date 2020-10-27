@@ -2843,9 +2843,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	TMarker *galMarks[10];
 	TMarker *galMarksSup[10];
 	TMarker *galMarksEq[10];
+	TMarker *galMarksEqI[10];
 	TText *labels[10];
 	TText *labelsSup[10];
 	TText *labelsEq[10];
+	TText *labelsEqI[10];
 	TPad *pad1 = new TPad("pad1","",0,0,1,1);
 	
 	//marker initialization
@@ -2853,9 +2855,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		galMarks[i] = new TMarker(0.,0., 43);
 		galMarksSup[i] = new TMarker(0.,0., 43);
 		galMarksEq[i] = new TMarker(0.,0., 43);
+		galMarksEqI[i] = new TMarker(0.,0., 43);
 		galMarks[i]->SetMarkerSize(1.5);
 		galMarksSup[i]->SetMarkerSize(1.5);
 		galMarksEq[i]->SetMarkerSize(1.5);
+		galMarksEqI[i]->SetMarkerSize(1.5);
 	}
 
 	//label initialization
@@ -2872,6 +2876,53 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		labelsEq[i]->SetTextSize(20);
 		labelsEq[i]->SetTextFont(43);
 		labelsEq[i]->SetTextAlign(22);
+		labelsEqI[i] = new TText();
+		labelsEqI[i]->SetTextSize(20);
+		labelsEqI[i]->SetTextFont(43);
+		labelsEqI[i]->SetTextAlign(22);
+	}
+	
+	//pad init
+	pad1->SetFillStyle(4000);
+	pad1->SetFillColor(0);
+	pad1->SetBorderSize(0);
+	pad1->SetFrameBorderMode(0);
+	pad1->SetFrameLineColor(0); 
+	pad1->SetFrameBorderMode(0);
+	pad1->Range(-231,-111.875,283,111.875);
+	
+	//calculations done for the gridlines of each skymap
+	float conv=TMath::Pi()/180; 
+	float la, lo, x, yy, z;
+	int Nl = 5; // Number of drawn latitudes
+	int NL = 5; // Number of drawn longitudes
+	int M  = 30;
+	
+	TGraph  *latitudes[Nl];
+	TGraph  *longitudes[NL];
+	
+	for (int j=0;j<Nl;++j) {
+		latitudes[j]=new TGraph();
+		la = -90+180/(Nl-1)*j;
+		for (int i=0;i<M+1;++i) {
+			lo = -180+360/M*i;
+			z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+			x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+			yy  = 90*sin(la*conv)/z;
+			latitudes[j]->SetPoint(i,x,yy);
+		}
+	}
+	
+	for (int j=0;j<NL;++j) {
+		longitudes[j]=new TGraph();
+		lo = -180+360/(NL-1)*j;
+		for (int i=0;i<M+1;++i) {
+			la = -90+180/M*i;
+			z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+			x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+			yy  = 90*sin(la*conv)/z;
+			longitudes[j]->SetPoint(i,x,yy);
+		}
 	}
 	
 	//2D histograms for various skymaps + histogram to store number of neutrino events
@@ -2880,6 +2931,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //galactic
 	TH2F *skymapProjSuperGal = new TH2F("skymapProjSuperGal","360 FoV Projection In Supergalactic Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //supergal
 	TH2F *skymapProjEq = new TH2F("skymapProjEq","360 FoV Projection In Equatorial Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
+	TH2F *skymapInstantConverage = new TH2F("skymapInstantConverage","Instantanious Sky Coverage In Equatorial Coordinates", 361, -180.05, 180.05, 181, -90.05, 90.05); //histogram for instant sky coverage
 	TH2F *nuevents = (TH2F*)skymapProjEq->Clone("nuevents");
 	
 	//histogram formatting
@@ -2911,8 +2963,86 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	gPad->SetLogz(1);
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
-	in.open("flarecomp.txt"); //open ephem file
-	//~ gStyle->SetPalette(56);
+	in.open("txsflare.txt"); //open ephem file
+	
+	for(int r = -180; r <= 180; r++) { //filling the instant sky converage histogram
+		for(int d = -90; d <= 90; d++) {
+			Double_t az = (atan2(sin((LST - r) * degconv), cos((LST - r) * degconv) * sin(latitude * degconv) - tan(d * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+			Double_t alt = asin(sin(latitude * degconv) * sin(d * degconv) + cos(latitude * degconv) * cos(d * degconv) * cos((LST - r) * degconv)) * 180 / pi;
+			if(az > 180.0)
+				az = az - 360.0;
+			else if(az < -180.0)
+				az = az + 360.0;
+			int xBin = (int)((az + 180.1) * 10);
+			int yBin = (int)((alt + 90.1) * 10);
+			skymapInstantConverage->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin));
+		}
+	}
+	
+	TCanvas *skyProjInstantEq = new TCanvas("skyProjInstantEq","Instant Skymap Coverage (Equatorial Coordinates)",1500,750); //canvas for instant converage skymap
+	TPad *padI = (TPad*)pad1->Clone("padI");
+	
+	skyProjInstantEq->cd(1);
+	skyProjInstantEq->SetRightMargin(0.2);
+	
+	skymapInstantConverage->GetXaxis()->SetTitle("Right Ascension [deg]");
+	skymapInstantConverage->GetYaxis()->SetTitle("Declination [deg]");
+	skymapInstantConverage->GetZaxis()->SetTitle("Acceptance [cm^{2}]");
+	skymapInstantConverage->Draw("z aitoff");
+	padI->Draw();
+	
+	galMarksEqI[0]->SetX(84.7649); //galactic center
+	galMarksEqI[0]->SetY(-32.1444);
+	
+	galMarksEqI[1]->SetX(-77.0868); //TXS
+	galMarksEqI[1]->SetY(6.1484);
+	
+	galMarksEqI[2]->SetX(86.8957); //MRK 501
+	galMarksEqI[2]->SetY(45.1052);
+	
+	galMarksEqI[3]->SetX(-132.496); //MRK 421
+	galMarksEqI[3]->SetY(52.534);
+	
+	galMarksEqI[4]->SetX(161.754); //Virgo
+	galMarksEqI[4]->SetY(-9.72109);
+	
+	galMarksEqI[5]->SetX(49.3004); //cygnus A
+	galMarksEqI[5]->SetY(42.3715);
+	
+	galMarksEqI[6]->SetX(119.23); // Cen A
+	galMarksEqI[6]->SetY(-56.6101);
+	
+	galMarksEqI[7]->SetX(-92.1939); //Auger Dipole
+	galMarksEqI[7]->SetY(-29.1072);
+	
+	galMarksEqI[8]->SetX(-44.1018); //Fornax
+	galMarksEqI[8]->SetY(-34.7217);
+	
+	galMarksEqI[9]->SetX(-102.613); //TA Hotspot
+	galMarksEqI[9]->SetY(52.2853);
+	
+	labelsEqI[0]->SetText(galMarksEqI[0]->GetX() + 12, galMarksEqI[0]->GetY() -5, "Galactic Center");
+	labelsEqI[1]->SetText(galMarksEqI[1]->GetX(), galMarksEqI[1]->GetY() -5, "TXS 0506+056");
+	labelsEqI[2]->SetText(galMarksEqI[2]->GetX(), galMarksEqI[2]->GetY() -5, "MRK 501");
+	labelsEqI[3]->SetText(galMarksEqI[3]->GetX() - 15, galMarksEqI[3]->GetY(), "MRK 421");
+	labelsEqI[4]->SetText(galMarksEqI[4]->GetX(), galMarksEqI[4]->GetY() -5, "Virgo");
+	labelsEqI[5]->SetText(galMarksEqI[5]->GetX(), galMarksEqI[5]->GetY() -5, "Cygnus A");
+	labelsEqI[6]->SetText(galMarksEqI[6]->GetX(), galMarksEqI[6]->GetY() -5, "Cen A");
+	labelsEqI[7]->SetText(galMarksEqI[7]->GetX() - 7, galMarksEqI[7]->GetY() -5, "Auger Dipole");
+	labelsEqI[8]->SetText(galMarksEqI[8]->GetX(), galMarksEqI[8]->GetY() -5, "Fornax");
+	labelsEqI[9]->SetText(galMarksEqI[9]->GetX() + 9, galMarksEqI[9]->GetY() -5, "TA Hotspot");
+	
+	padI->cd();
+	
+	for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
+	for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
+	
+	for(int i = 0; i < 10; i++) {
+		galMarksEqI[i]->Draw();
+		labelsEqI[i]->Draw();
+	}
+	
+	gStyle->SetPalette(56);
 	//~ return;//testing
 	
 	Double_t totalT = 0, totalAcc = 0;
@@ -3130,7 +3260,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
 				nuevents->SetBinContent(i, j, skymapProjEq->GetBinContent(i, j) * normInverse * Fnaught / pow(Enaught, -nuIndex));
 		}
-	} else cout << "Unable to open file" << endl; 
+	} else {cout << "Unable to open file" << endl; return; }
 	
 		for(int i = 1; i <= skymapProjEq->GetNbinsX(); i++) {
 		for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
@@ -3146,48 +3276,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	//initializing and formatting graphical elements for the galactic coordinate skymap
 	TCanvas *skyProjC = new TCanvas("skyProjC","Skymap Projection (Galactic Coordinates)",1500,750); //canvas for galactic skymap projections
 	
-	//calculations done for the gridlines of each skymap
-	float conv=TMath::Pi()/180; 
-	float la, lo, x, yy, z;
-	int Nl = 5; // Number of drawn latitudes
-	int NL = 5; // Number of drawn longitudes
-	int M  = 30;
-	
-	TGraph  *latitudes[Nl];
-	TGraph  *longitudes[NL];
-	
-	for (int j=0;j<Nl;++j) {
-		latitudes[j]=new TGraph();
-		la = -90+180/(Nl-1)*j;
-		for (int i=0;i<M+1;++i) {
-			lo = -180+360/M*i;
-			z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-			x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-			yy  = 90*sin(la*conv)/z;
-			latitudes[j]->SetPoint(i,x,yy);
-		}
-	}
-	
-	for (int j=0;j<NL;++j) {
-		longitudes[j]=new TGraph();
-		lo = -180+360/(NL-1)*j;
-		for (int i=0;i<M+1;++i) {
-			la = -90+180/M*i;
-			z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-			x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-			yy  = 90*sin(la*conv)/z;
-			longitudes[j]->SetPoint(i,x,yy);
-		}
-	}
-	
 	//pad and histogram formatting
-	pad1->SetFillStyle(4000);
-	pad1->SetFillColor(0);
-	pad1->SetBorderSize(0);
-	pad1->SetFrameBorderMode(0);
-	pad1->SetFrameLineColor(0); 
-	pad1->SetFrameBorderMode(0);
-	pad1->Range(-231,-111.875,283,111.875);
 	
 	TPad *pad2 = (TPad*)pad1->Clone("pad2");
 	TPad *pad3 = (TPad*)pad1->Clone("pad3");
