@@ -121,6 +121,7 @@ Double_t latitude;
 Double_t tStep;
 //~ Double_t y;
 Double_t MaxAzimuth;
+Bool_t multNorm = kTRUE;
 
 string Hold()
 {
@@ -960,7 +961,10 @@ void GetTauDistribution(TH1D *hTauSpec, Double_t d, Double_t Enumin = 1e9, Doubl
    //Double_t DeltaEnu = (Enumax - Enumin)/nEnuSteps;
    Double_t DeltaEnu = 0.1; //logscale
    int nEnuSteps = (0.0001+log10(Enumax) - log10(Enumin))/DeltaEnu; //the 0.0001 is due to small uncertainties making sure we get the right number of steps
+   
    Double_t Normalization = (nuIndex-1)/(pow(Enumin,1-nuIndex)-pow(Enumax,1-nuIndex)); 
+   if (!multNorm)
+	Normalization = 1.0;
    vector<double> Enu;
    vector<double> EnuWeight;
    for(int i=0;i<nEnuSteps;i++)
@@ -2809,6 +2813,79 @@ void GetAcceptanceSingleAngle(Double_t dMinEnu, Double_t dMaxEnu, TH1D *hTau, TH
 	}
 }
 
+void PlotAcceptanceVsEnergy(TH1D *hTau)
+{
+	yMin = 20; //min distance from telescope where tau comes out of the ground in km
+	yMax = 26;
+	DeltaAngleAz = 0.1; //azimuth angle step
+	DeltaAngle = 0.1; //elevation angle step
+	MaxAzimuth = 180.; //max azi angle
+	MaxElevation = 40; //max elv angle 
+	bCombined = kTRUE; //both flor and cher events considered
+    
+    //values from differential sensitivity calculations
+    yDelta = 5.0; //5
+    iConfig = 2; //telescope altitude
+    Double_t dFoV = 2;  //test 0, 1, 2, 10
+    tanFoV = tan(dFoV/180.*pi);
+    dFoVBelow =  3/180.*pi; 
+    iMirrorSize = 2;
+    dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
+    dMinLength = 0.3;
+    
+    Double_t logEmin = 6.0; //min energy log
+    Double_t logEmax = 10.0; //max energy log
+    Double_t logE = logEmin; //neutrino energy of interest log
+    Double_t logEstep = 0.1; //step in energy log
+    int nSteps = (int)ceil((logEmax - logEmin) / logEstep + 1);
+    Double_t eng[nSteps], acc[nSteps];
+    
+    TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle1","Acceptance Skymap of Single Azimuth Angle [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
+    TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep1","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
+    
+    for(int i = 0; i < nSteps; i++) {
+		skymapSingleAngle->Reset("ICESM");
+		skymapFull360Sweep->Reset("ICESM");
+		
+		GetAcceptanceSingleAngle(logE, (logE + 0.1), hTau, skymapSingleAngle);
+		
+		for(int yBins = 1; yBins <= skymapSingleAngle->GetNbinsY(); yBins++)
+		{
+			Double_t comboBin = 0;
+			for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+				comboBin += skymapSingleAngle->GetBinContent(xBins, yBins);
+			for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+				skymapFull360Sweep->SetBinContent(xBins, yBins, comboBin);
+		}
+		
+		Double_t totalAcc = 0;
+		
+		for(int i = 1; i <= skymapFull360Sweep->GetNbinsX(); i++)
+		{
+			for(int j = 1; j <= skymapFull360Sweep->GetNbinsY(); j++)
+				totalAcc += skymapFull360Sweep->GetBinContent(i, j);
+		}
+		
+		eng[i] = pow(10.0, logE);
+		acc[i] = totalAcc;
+		
+		logE += 0.1;
+	}
+    
+    TCanvas *accVE = new TCanvas("accVE", "Acceptance v. Neutrino Energy", 1300, 900);
+    TGraph *accVSEplot = new TGraph(nSteps, eng, acc);
+    accVSEplot->SetLineColor(2);
+	accVSEplot->SetLineWidth(4);
+	accVSEplot->SetTitle("Plot of Acceptance Vs. Neutino Energy");
+	accVSEplot->GetYaxis()->SetTitle("Acceptance [cm^{2}]");
+	accVSEplot->GetXaxis()->SetTitle("Neutrino Energy [GeV]");
+	accVE->SetLogy(1);
+	accVE->SetLogx(1);
+	accVE->SetGridx(1);
+	accVE->SetGridy(1);
+	accVSEplot->Draw("AC");
+}
+
 void PlotAcceptanceSkymaps(TH1D *hTau)
 {
 	latitude = 38.52028; //lat of frisco peak, utah
@@ -2827,6 +2904,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	Double_t Enaught = 10000; //GeV from IceCube paper (100 TeV)
 	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
+	normInverse = 1.0;
+	multNorm = kFALSE;
 	
 	//values from differential sensitivity calculations
     yDelta = 5.0; //5
@@ -3666,6 +3745,7 @@ bFluorescence = kFALSE;
 //
 
 PlotAcceptanceSkymaps(hTau);
+//~ PlotAcceptanceVsEnergy(hTau);
 
 /*
 cout<<"DEBUGGING"<<endl;
