@@ -2901,7 +2901,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     Double_t logEmax = 10.0; //max energy log
     Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-	Double_t Enaught = 10000; //GeV from IceCube paper (100 TeV)
+	Double_t Enaught = 100000; //GeV from IceCube paper (100 TeV)
 	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
 	normInverse = 1.0;
@@ -3339,9 +3339,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
 				nuevents->SetBinContent(i, j, skymapProjEq->GetBinContent(i, j) * normInverse * Fnaught / pow(Enaught, -nuIndex));
 		}
+		
+		in.close();
 	} else {cout << "Unable to open file" << endl; return; }
 	
-		for(int i = 1; i <= skymapProjEq->GetNbinsX(); i++) {
+	for(int i = 1; i <= skymapProjEq->GetNbinsX(); i++) {
 		for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
 			totalAcc += skymapProjEq->GetBinContent(i, j);
 	}
@@ -3604,6 +3606,242 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"TA Hotspot Events: "<<nuevents->GetBinContent((int)(-133.503 + 181), (int)(43.1166 + 91))<<endl;
 }
 
+Double_t GetEventSingleSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
+{
+	latitude = 38.52028; //lat of frisco peak, utah
+	tStep = 2.5; //10 min step in degrees
+	yMin = 20; //min distance from telescope where tau comes out of the ground in km
+	yMax = 26;
+	DeltaAngleAz = 0.1; //azimuth angle step
+	DeltaAngle = 0.1; //elevation angle step
+	MaxAzimuth = 180.; //max azi angle
+	MaxElevation = 40; //max elv angle 
+	bCombined = kTRUE; //both flor and cher events considered
+	Double_t logEmin = minElog; //min energy log
+    Double_t logEmax = maxElog; //max energy log
+    Double_t LST = 0;
+	Double_t degconv = pi/180.0;
+	Double_t Enaught = 100000; //GeV from IceCube paper (100 TeV)
+	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
+	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
+	normInverse = 1.0;
+	//~ multNorm = kFALSE;
+	
+	//values from differential sensitivity calculations
+    yDelta = 5.0; //5
+    iConfig = 2; //telescope altitude
+    Double_t dFoV = 2;  //test 0, 1, 2, 10
+    tanFoV = tan(dFoV/180.*pi);
+    dFoVBelow =  3/180.*pi; 
+    iMirrorSize = 2;
+    dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
+    dMinLength = 0.3;
+    
+    TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle111","Acceptance Skymap of Single Azimuth Angle [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
+	TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep111","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
+	TH2F *skymapProjEq = new TH2F("skymapProjEq111","360 FoV Projection In Equatorial Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
+	TH2F *nuevents = (TH2F*)skymapProjEq->Clone("nuevents111");
+	
+	skymapSingleAngle->Reset("ICESM");
+	skymapFull360Sweep->Reset("ICESM");
+	skymapProjEq->Reset("ICESM");
+	nuevents->Reset("ICESM");
+	
+	GetAcceptanceSingleAngle(logEmin, logEmax, hTau, skymapSingleAngle);
+	
+	for(int yBins = 1; yBins <= skymapSingleAngle->GetNbinsY(); yBins++)
+    {
+		Double_t comboBin = 0;
+		for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			comboBin += skymapSingleAngle->GetBinContent(xBins, yBins);
+		for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			skymapFull360Sweep->SetBinContent(xBins, yBins, comboBin);
+	}
+	
+	ifstream in;
+	in.open("txsflare.txt"); //open ephem file
+	
+	Double_t totalT = 0, totalAcc = 0;
+	//calculations for the time evolution of the horizontal skymaps over various coordinate systems
+	if (in.is_open())
+	{
+		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted; 
+		//~ Double_t origLST;
+		string sTimeS, rTimeS, rTimeM, sTimeM, phM;
+		bool nestNone = false, nestSun = false, nestBoth = false;
+		int nSteps;
+		
+		while(in.good()) 
+		{
+			in >> sTimeS >> rTimeS >> rTimeM >> sTimeM >> phM; //read from the file that contains rise and set times of moon and sun in LST as well as phase of moon
+			
+			setTimeSun = stod(sTimeS);
+			riseTimeSun = stod(rTimeS);
+			riseTimeMoon = stod(rTimeM);
+			setTimeMoon = stod(sTimeM);
+			phaseMoon = stod(phM);
+			
+			nestNone = false;
+			nestSun = false;
+			nestBoth = false;
+			
+			//moon phase calculations
+			if(phaseMoon < 0.3) {
+				if(setTimeSun > riseTimeSun)
+					deltaT = (360.0 - setTimeSun) + riseTimeSun;
+				else
+					deltaT = riseTimeSun - setTimeSun;
+				LST = setTimeSun;
+			} else {
+				if( (riseTimeSun > setTimeSun) && (setTimeMoon > riseTimeMoon) ) { //both don't cross 0hr
+					if( (riseTimeMoon < setTimeSun) && (setTimeMoon < setTimeSun) && (setTimeMoon < riseTimeSun) ){
+						LST = setTimeMoon;
+						deltaT = riseTimeSun - setTimeMoon;
+					} else if( (riseTimeMoon > setTimeSun) && (setTimeMoon > riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeMoon - setTimeSun;
+					} else if( (riseTimeMoon > setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (riseTimeMoon - setTimeSun) + (riseTimeSun - setTimeMoon);
+						nestNone = true;
+					} else if( (riseTimeMoon < setTimeSun && setTimeMoon < setTimeSun) || (riseTimeMoon > riseTimeSun && setTimeMoon > riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeSun - setTimeSun;
+					} else { deltaT = 0; }
+				} else if( (riseTimeSun < setTimeSun) && (setTimeMoon > riseTimeMoon) ) { //only sun crosses 0hr (impossible for moon to cover full night)
+					if( (riseTimeMoon < setTimeSun) && (setTimeMoon > setTimeSun) ) {
+						LST = setTimeMoon;
+						deltaT = (360. + riseTimeSun) - setTimeMoon;
+					} else if( (riseTimeSun > riseTimeMoon) && (riseTimeSun < setTimeMoon) ) {
+						LST = setTimeSun;
+						deltaT = (360. + riseTimeMoon) - setTimeSun;
+					} else if( (riseTimeMoon > setTimeSun && setTimeMoon < 360.) || (riseTimeMoon < riseTimeSun && setTimeMoon < riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (riseTimeSun + 360. - setTimeSun) - (setTimeMoon - riseTimeMoon);
+						nestSun = true;
+					} else if( (riseTimeMoon < setTimeSun && setTimeMoon < setTimeSun) || (riseTimeMoon > riseTimeSun && setTimeMoon > riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (360. + riseTimeSun) - setTimeSun;
+					}
+				} else if( (riseTimeSun > setTimeSun) && (setTimeMoon < riseTimeMoon) ) { //only moon crosses 0hr
+					if( ((setTimeSun + 360.) > riseTimeMoon) && (setTimeMoon > setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeMoon;
+						deltaT = riseTimeSun - setTimeMoon;
+					} else if( (riseTimeMoon < riseTimeSun) && (riseTimeSun < (setTimeMoon + 360.)) && (riseTimeMoon > setTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeMoon - setTimeSun;
+					} else if( (riseTimeMoon > riseTimeSun) && (setTimeMoon < setTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeSun - setTimeSun;
+					} else { deltaT = 0; }
+				} else if ( (riseTimeSun < setTimeSun)  && (setTimeMoon < riseTimeMoon) ) { //both cross 0 hr
+					if( (riseTimeMoon > setTimeSun) && (riseTimeSun < setTimeMoon) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeMoon - setTimeSun;
+					} else if( (riseTimeMoon < setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeMoon;
+						deltaT = riseTimeSun - setTimeMoon;
+					} else if( (setTimeSun < riseTimeMoon) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (riseTimeSun + 360. - setTimeSun) - (setTimeMoon + 360. - riseTimeMoon);
+						nestBoth = true;
+					} else { deltaT = 0; }
+				}
+			}
+			
+			totalT += deltaT;
+			nSteps = (int)(deltaT / tStep);
+			tStepAdjusted = deltaT / nSteps;
+
+			//evolving the horizotal skymap over time and projecting onto equatorial coordinates
+			for(int i = 0; i < nSteps; i++) { //eqatorial
+				for(int r = -180; r <= 180; r++) {
+					for(int d = -90; d <= 90; d++) {
+						Double_t az = (atan2(sin((LST - r) * degconv), cos((LST - r) * degconv) * sin(latitude * degconv) - tan(d * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+						Double_t alt = asin(sin(latitude * degconv) * sin(d * degconv) + cos(latitude * degconv) * cos(d * degconv) * cos((LST - r) * degconv)) * 180 / pi;
+						if(az > 180.0)
+							az = az - 360.0;
+						else if(az < -180.0)
+							az = az + 360.0;
+						int xBin = (int)((az + 180.1) * 10);
+						int yBin = (int)((alt + 90.1) * 10);
+						if( !(nestNone && LST > riseTimeMoon && LST < setTimeMoon) && 
+							!(nestSun && LST > riseTimeMoon && LST < setTimeMoon) && 
+							!(nestBoth && ( (LST > riseTimeMoon && LST < 360.) || (LST > 0 && LST < setTimeMoon) ) ) ) 
+							{ 
+								skymapProjEq->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240); //240 sec = 1 degree of RA
+								//~ nuevents->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240 * normInverse * Fnaught / pow(Enaught, -nuIndex));
+							} 
+					}
+				}
+				LST += tStepAdjusted;
+				if(LST > 360.0)
+					LST -= 360.0;
+			}
+		}
+		//applying the IceCube parameters to the time-evolved acceptance to get the number of neutrino events in each bin
+		for(int i = 1; i <= skymapProjEq->GetNbinsX(); i++)
+		{
+			for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
+				nuevents->SetBinContent(i, j, skymapProjEq->GetBinContent(i, j) * normInverse * Fnaught / pow(Enaught, -nuIndex));
+		}
+		
+		in.close();
+	} else {cout << "Unable to open file" << endl; return -1.0; }
+	
+	for(int i = 1; i <= skymapProjEq->GetNbinsX(); i++) {
+		for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
+			totalAcc += skymapProjEq->GetBinContent(i, j);
+	}
+	
+	//printing observation time, acceptance, and duty cycle
+	//~ cout<<"Total observation time: "<<totalT * (24.0 / 360.0)<<" hours."<<endl;
+	//~ cout<<"Total Acceptance over "<<totalT * (24.0 / 360.0)<<" hours: "<<totalAcc<<endl;
+	
+	Double_t out = nuevents->GetBinContent((int)(-77.3581 + 181), (int)(5.69315 + 91));
+	
+	delete(skymapSingleAngle);
+	delete(skymapFull360Sweep);
+	delete(skymapProjEq);
+	delete(nuevents);
+	
+	return out;
+}
+
+void GetEventVEnergy(TH1D *hTau)
+{
+	Double_t min = 6.0;
+	Double_t max = 10.0;
+	Double_t step = 0.1;
+	Double_t eng = min;
+	int nSteps = (int)((max - min) / step);
+	Double_t totalEvents = 0;
+	
+	multNorm = kFALSE;
+	cout<<"Without normalization constant: "<<endl;
+	for(int i = 0; i < nSteps; i++)
+	{
+		Double_t nev = GetEventSingleSrc(hTau, eng, eng + step);
+		cout<<"Number of events between 10^"<<eng<<" GeV and 10^"<<eng + step<<" Gev: "<<nev<<endl;
+		eng += step;
+		totalEvents += nev;
+	}
+	cout<<"Total events between 10^"<<min<<" GeV and 10^"<<max<<" Gev: "<<totalEvents<<endl<<endl;
+	
+	multNorm = kTRUE;
+	cout<<"With normalization constant: "<<endl;
+	totalEvents = 0;
+	eng = min;
+	for(int i = 0; i < nSteps; i++)
+	{
+		Double_t nev = GetEventSingleSrc(hTau, eng, eng + step);
+		cout<<"Number of events between 10^"<<eng<<" GeV and 10^"<<eng + step<<" Gev: "<<nev<<endl;
+		eng += step;
+		totalEvents += nev;
+	}
+	cout<<"Total events between 10^"<<min<<" GeV and 10^"<<max<<" Gev: "<<totalEvents<<endl<<endl;
+}
+
 ////////////////////////////////////////////////////////////////////
 // Main Program
 //
@@ -3744,8 +3982,9 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-PlotAcceptanceSkymaps(hTau);
+//~ PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
+GetEventVEnergy(hTau);
 
 /*
 cout<<"DEBUGGING"<<endl;
