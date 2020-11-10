@@ -2904,8 +2904,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	Double_t Enaught = 100000; //GeV from IceCube paper (100 TeV)
 	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
-	normInverse = 1.0;
-	multNorm = kFALSE;
+	//~ normInverse = 1.0;
+	//~ multNorm = kFALSE;
 	
 	//values from differential sensitivity calculations
     yDelta = 5.0; //5
@@ -3005,11 +3005,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	}
 	
 	//2D histograms for various skymaps + histogram to store number of neutrino events
-	TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle","Acceptance Skymap of Single Azimuth Angle [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
-	TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
-	TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //galactic
-	TH2F *skymapProjSuperGal = new TH2F("skymapProjSuperGal","360 FoV Projection In Supergalactic Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //supergal
-	TH2F *skymapProjEq = new TH2F("skymapProjEq","360 FoV Projection In Equatorial Coordinates Over MJD 56937.81 - 57096.21 [10^9 GeV]", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
+	TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle","Acceptance Skymap of Single Azimuth Angle", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
+	TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
+	TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over MJD 56937.81 to MJD 57096.21", 361, -180.05, 180.05, 181, -90.05, 90.05); //galactic
+	TH2F *skymapProjSuperGal = new TH2F("skymapProjSuperGal","360 FoV Projection In Supergalactic Coordinates Over MJD 56937.81 to MJD 57096.21", 361, -180.05, 180.05, 181, -90.05, 90.05); //supergal
+	TH2F *skymapProjEq = new TH2F("skymapProjEq","360 FoV Projection In Equatorial Coordinates Over MJD 56937.81 to MJD 57096.21", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
 	TH2F *skymapInstantConverage = new TH2F("skymapInstantConverage","Instantanious Sky Coverage In Equatorial Coordinates", 361, -180.05, 180.05, 181, -90.05, 90.05); //histogram for instant sky coverage
 	TH2F *nuevents = (TH2F*)skymapProjEq->Clone("nuevents");
 	
@@ -3043,15 +3043,28 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
 	in.open("txsflare.txt"); //open ephem file
-	
+	//~ return;
 	for(int r = -180; r <= 180; r++) { //filling the instant sky converage histogram
 		for(int d = -90; d <= 90; d++) {
 			Double_t az = (atan2(sin((LST - r) * degconv), cos((LST - r) * degconv) * sin(latitude * degconv) - tan(d * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+			//~ Double_t az = (-1.0 * atan2(sin((LST - r) * degconv) * cos(d * degconv), cos(latitude * degconv) * sin(d * degconv) - sin(latitude * degconv) * cos(d * degconv) * cos((LST - r) * degconv)) * 180 / pi) - 180;
 			Double_t alt = asin(sin(latitude * degconv) * sin(d * degconv) + cos(latitude * degconv) * cos(d * degconv) * cos((LST - r) * degconv)) * 180 / pi;
 			if(az > 180.0)
 				az = az - 360.0;
 			else if(az < -180.0)
 				az = az + 360.0;
+			//~ Double_t dec = asin(sin(d * degconv) * sin(27.1284 * degconv) + cos(d * degconv) * cos(27.1284 * degconv) * cos((122.9320 - r) * degconv)) * 180 / pi;
+			//~ Double_t ra = (atan2((cos(d * degconv) * sin((122.932 - r) * degconv)), (sin(d * degconv) * cos(27.1284 * degconv) - cos(d * degconv) * sin(27.1284 * degconv) * cos((122.9320 - r) * degconv))) * 180 / pi) + 192.8595;
+			//~ if(ra > 180)
+				//~ ra = ra - 360.;
+			//~ if(ra < -180)
+				//~ ra = ra + 360.;
+			//~ Double_t az = (atan2(sin((LST - ra) * degconv), cos((LST - ra) * degconv) * sin(latitude * degconv) - tan(dec * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+			//~ Double_t alt = asin(sin(latitude * degconv) * sin(dec * degconv) + cos(latitude * degconv) * cos(dec * degconv) * cos((LST - ra) * degconv)) * 180 / pi;
+			//~ if(az > 180.0)
+				//~ az = az - 360.0;
+			//~ if(az < -180.0)
+				//~ az = az + 360.0;
 			int xBin = (int)((az + 180.1) * 10);
 			int yBin = (int)((alt + 90.1) * 10);
 			skymapInstantConverage->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin));
@@ -3099,6 +3112,36 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	
 	galMarksEqI[9]->SetX(-102.613); //TA Hotspot
 	galMarksEqI[9]->SetY(52.2853);
+	
+	//~ galMarksEqI[0]->SetX(0); //galactic center
+	//~ galMarksEqI[0]->SetY(0);
+	
+	//~ galMarksEqI[1]->SetX(155.711); //TXS
+	//~ galMarksEqI[1]->SetY(-28.0311);
+	
+	//~ galMarksEqI[2]->SetX(-53.1613); //MRK 501
+	//~ galMarksEqI[2]->SetY(40.6421);
+	
+	//~ galMarksEqI[3]->SetX(-75.9516); //MRK 421
+	//~ galMarksEqI[3]->SetY(81.5564);
+	
+	//~ galMarksEqI[4]->SetX(32.3546); //Virgo
+	//~ galMarksEqI[4]->SetY(57.0701);
+	
+	//~ galMarksEqI[5]->SetX(-75.9174); //cygnus A
+	//~ galMarksEqI[5]->SetY(6.20106);
+	
+	//~ galMarksEqI[6]->SetX(48.4862); // Cen A
+	//~ galMarksEqI[6]->SetY(20.0392);
+	
+	//~ galMarksEqI[7]->SetX(122.036); //Auger Dipole
+	//~ galMarksEqI[7]->SetY(-17.1514);
+	
+	//~ galMarksEqI[8]->SetX(75.2931); //Fornax
+	//~ galMarksEqI[8]->SetY(-65.8552);
+	
+	//~ galMarksEqI[9]->SetX(-136.706); //TA Hotspot
+	//~ galMarksEqI[9]->SetY(57.3636);
 	
 	labelsEqI[0]->SetText(galMarksEqI[0]->GetX() + 12, galMarksEqI[0]->GetY() -5, "Galactic Center");
 	labelsEqI[1]->SetText(galMarksEqI[1]->GetX(), galMarksEqI[1]->GetY() -5, "TXS 0506+056");
@@ -3624,7 +3667,7 @@ Double_t GetEventSingleSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
 	Double_t Enaught = 100000; //GeV from IceCube paper (100 TeV)
 	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
-	normInverse = 1.0;
+	//~ normInverse = 1.0;
 	//~ multNorm = kFALSE;
 	
 	//values from differential sensitivity calculations
@@ -3808,6 +3851,179 @@ Double_t GetEventSingleSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
 	return out;
 }
 
+Double_t PrintAccSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
+{
+	latitude = 38.52028; //lat of frisco peak, utah
+	tStep = 2.5; //10 min step in degrees
+	yMin = 20; //min distance from telescope where tau comes out of the ground in km
+	yMax = 26;
+	DeltaAngleAz = 0.1; //azimuth angle step
+	DeltaAngle = 0.1; //elevation angle step
+	MaxAzimuth = 180.; //max azi angle
+	MaxElevation = 40; //max elv angle 
+	bCombined = kTRUE; //both flor and cher events considered
+	Double_t logEmin = minElog; //min energy log
+    Double_t logEmax = maxElog; //max energy log
+    Double_t LST = 0;
+	Double_t degconv = pi/180.0;
+	Double_t srcRA = 77.35811176;
+	Double_t srcDec = 5.69314237;
+	
+	//values from differential sensitivity calculations
+    yDelta = 5.0; //5
+    iConfig = 2; //telescope altitude
+    Double_t dFoV = 2;  //test 0, 1, 2, 10
+    tanFoV = tan(dFoV/180.*pi);
+    dFoVBelow =  3/180.*pi; 
+    iMirrorSize = 2;
+    dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
+    dMinLength = 0.3;
+    //~ multNorm = kFALSE;
+    
+    TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle111","Acceptance Skymap of Single Azimuth Angle [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
+	TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep111","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
+	
+	GetAcceptanceSingleAngle(logEmin, logEmax, hTau, skymapSingleAngle);
+	
+	for(int yBins = 1; yBins <= skymapSingleAngle->GetNbinsY(); yBins++)
+    {
+		Double_t comboBin = 0;
+		for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			comboBin += skymapSingleAngle->GetBinContent(xBins, yBins);
+		for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			skymapFull360Sweep->SetBinContent(xBins, yBins, comboBin);
+	}
+	
+	ifstream in;
+	in.open("txsflare.txt"); //open ephem file
+	
+	Double_t totalAcc = 0, totalT = 0;
+	int nCrosses = 0;
+	if (in.is_open())
+	{
+		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted; 
+		string sTimeS, rTimeS, rTimeM, sTimeM, phM;
+		bool nestNone = false, nestSun = false, nestBoth = false;
+		int nSteps;
+		
+		while(in.good()) 
+		{
+			in >> sTimeS >> rTimeS >> rTimeM >> sTimeM >> phM; //read from the file that contains rise and set times of moon and sun in LST as well as phase of moon
+			
+			setTimeSun = stod(sTimeS);
+			riseTimeSun = stod(rTimeS);
+			riseTimeMoon = stod(rTimeM);
+			setTimeMoon = stod(sTimeM);
+			phaseMoon = stod(phM);
+			
+			nestNone = false;
+			nestSun = false;
+			nestBoth = false;
+			
+			//moon phase calculations
+			if(phaseMoon < 0.3) {
+				if(setTimeSun > riseTimeSun)
+					deltaT = (360.0 - setTimeSun) + riseTimeSun;
+				else
+					deltaT = riseTimeSun - setTimeSun;
+				LST = setTimeSun;
+			} else {
+				if( (riseTimeSun > setTimeSun) && (setTimeMoon > riseTimeMoon) ) { //both don't cross 0hr
+					if( (riseTimeMoon < setTimeSun) && (setTimeMoon < setTimeSun) && (setTimeMoon < riseTimeSun) ){
+						LST = setTimeMoon;
+						deltaT = riseTimeSun - setTimeMoon;
+					} else if( (riseTimeMoon > setTimeSun) && (setTimeMoon > riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeMoon - setTimeSun;
+					} else if( (riseTimeMoon > setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (riseTimeMoon - setTimeSun) + (riseTimeSun - setTimeMoon);
+						nestNone = true;
+					} else if( (riseTimeMoon < setTimeSun && setTimeMoon < setTimeSun) || (riseTimeMoon > riseTimeSun && setTimeMoon > riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeSun - setTimeSun;
+					} else { deltaT = 0; }
+				} else if( (riseTimeSun < setTimeSun) && (setTimeMoon > riseTimeMoon) ) { //only sun crosses 0hr (impossible for moon to cover full night)
+					if( (riseTimeMoon < setTimeSun) && (setTimeMoon > setTimeSun) ) {
+						LST = setTimeMoon;
+						deltaT = (360. + riseTimeSun) - setTimeMoon;
+					} else if( (riseTimeSun > riseTimeMoon) && (riseTimeSun < setTimeMoon) ) {
+						LST = setTimeSun;
+						deltaT = (360. + riseTimeMoon) - setTimeSun;
+					} else if( (riseTimeMoon > setTimeSun && setTimeMoon < 360.) || (riseTimeMoon < riseTimeSun && setTimeMoon < riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (riseTimeSun + 360. - setTimeSun) - (setTimeMoon - riseTimeMoon);
+						nestSun = true;
+					} else if( (riseTimeMoon < setTimeSun && setTimeMoon < setTimeSun) || (riseTimeMoon > riseTimeSun && setTimeMoon > riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (360. + riseTimeSun) - setTimeSun;
+					}
+				} else if( (riseTimeSun > setTimeSun) && (setTimeMoon < riseTimeMoon) ) { //only moon crosses 0hr
+					if( ((setTimeSun + 360.) > riseTimeMoon) && (setTimeMoon > setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeMoon;
+						deltaT = riseTimeSun - setTimeMoon;
+					} else if( (riseTimeMoon < riseTimeSun) && (riseTimeSun < (setTimeMoon + 360.)) && (riseTimeMoon > setTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeMoon - setTimeSun;
+					} else if( (riseTimeMoon > riseTimeSun) && (setTimeMoon < setTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeSun - setTimeSun;
+					} else { deltaT = 0; }
+				} else if ( (riseTimeSun < setTimeSun)  && (setTimeMoon < riseTimeMoon) ) { //both cross 0 hr
+					if( (riseTimeMoon > setTimeSun) && (riseTimeSun < setTimeMoon) ) {
+						LST = setTimeSun;
+						deltaT = riseTimeMoon - setTimeSun;
+					} else if( (riseTimeMoon < setTimeSun) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeMoon;
+						deltaT = riseTimeSun - setTimeMoon;
+					} else if( (setTimeSun < riseTimeMoon) && (setTimeMoon < riseTimeSun) ) {
+						LST = setTimeSun;
+						deltaT = (riseTimeSun + 360. - setTimeSun) - (setTimeMoon + 360. - riseTimeMoon);
+						nestBoth = true;
+					} else { deltaT = 0; }
+				}
+			}
+			
+			totalT += deltaT;
+			nSteps = (int)(deltaT / tStep);
+			tStepAdjusted = deltaT / nSteps;
+
+			//evolving the horizotal skymap over time and projecting onto equatorial coordinates
+			for(int i = 0; i < nSteps; i++) { //eqatorial
+				Double_t az = (atan2(sin((LST - srcRA) * degconv), cos((LST - srcRA) * degconv) * sin(latitude * degconv) - tan(srcDec * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+				Double_t alt = asin(sin(latitude * degconv) * sin(srcDec * degconv) + cos(latitude * degconv) * cos(srcDec * degconv) * cos((LST - srcRA) * degconv)) * 180 / pi;
+				if(az > 180.0)
+					az = az - 360.0;
+				else if(az < -180.0)
+					az = az + 360.0;
+				int xBin = (int)((az + 180.1) * 10);
+				int yBin = (int)((alt + 90.1) * 10);
+				if( !(nestNone && LST > riseTimeMoon && LST < setTimeMoon) && 
+					!(nestSun && LST > riseTimeMoon && LST < setTimeMoon) && 
+					!(nestBoth && ( (LST > riseTimeMoon && LST < 360.) || (LST > 0 && LST < setTimeMoon) ) ) ) 
+					{ 
+						if(skymapFull360Sweep->GetBinContent(xBin, yBin) > 0) {
+							cout<<"Instantaneous acceptance at source: "<<skymapFull360Sweep->GetBinContent(xBin, yBin)<<" cm^2 for energies 10^"<<logEmin<<" GeV to 10^"<<logEmax<<" GeV."<<endl;
+							totalAcc += skymapFull360Sweep->GetBinContent(xBin, yBin);
+							nCrosses++;
+						}
+					} 
+				LST += tStepAdjusted;
+				if(LST > 360.0)
+					LST -= 360.0;
+			}
+		}
+		cout<<"Total acceptance at source: "<<totalAcc<<" cm^2 for energies 10^"<<logEmin<<" GeV to 10^"<<logEmax<<" GeV."<<endl;
+		cout<<"Total times source was observed in the FoV over "<<totalT * (24.0 / 360.0)<<" hour observational period: "<<nCrosses<<endl; 
+		in.close();
+		
+		delete(skymapSingleAngle);
+		delete(skymapFull360Sweep);
+		
+		return totalAcc;
+	} else {cout << "Unable to open file" << endl; return -1.0; }
+}
+
 void GetEventVEnergy(TH1D *hTau)
 {
 	Double_t min = 6.0;
@@ -3817,16 +4033,16 @@ void GetEventVEnergy(TH1D *hTau)
 	int nSteps = (int)((max - min) / step);
 	Double_t totalEvents = 0;
 	
-	multNorm = kFALSE;
-	cout<<"Without normalization constant: "<<endl;
-	for(int i = 0; i < nSteps; i++)
-	{
-		Double_t nev = GetEventSingleSrc(hTau, eng, eng + step);
-		cout<<"Number of events between 10^"<<eng<<" GeV and 10^"<<eng + step<<" Gev: "<<nev<<endl;
-		eng += step;
-		totalEvents += nev;
-	}
-	cout<<"Total events between 10^"<<min<<" GeV and 10^"<<max<<" Gev: "<<totalEvents<<endl<<endl;
+	//~ multNorm = kFALSE;
+	//~ cout<<"Without normalization constant: "<<endl;
+	//~ for(int i = 0; i < nSteps; i++)
+	//~ {
+		//~ Double_t nev = GetEventSingleSrc(hTau, eng, eng + step);
+		//~ cout<<"Number of events between 10^"<<eng<<" GeV and 10^"<<eng + step<<" Gev: "<<nev<<endl;
+		//~ eng += step;
+		//~ totalEvents += nev;
+	//~ }
+	//~ cout<<"Total events between 10^"<<min<<" GeV and 10^"<<max<<" Gev: "<<totalEvents<<endl<<endl;
 	
 	multNorm = kTRUE;
 	cout<<"With normalization constant: "<<endl;
@@ -3840,6 +4056,40 @@ void GetEventVEnergy(TH1D *hTau)
 		totalEvents += nev;
 	}
 	cout<<"Total events between 10^"<<min<<" GeV and 10^"<<max<<" Gev: "<<totalEvents<<endl<<endl;
+}
+
+void PlotSrcInstantAccVsE(TH1D *hTau)
+{
+	Double_t min = 6.0;
+	Double_t max = 10.0;
+	Double_t step = 0.1;
+	Double_t En = min;
+	int nSteps = (int)((max - min) / step);
+	Double_t eng[nSteps], acc[nSteps];
+	Double_t totalA = 0;
+	
+	for(int i = 0; i < nSteps; i++) {
+		eng[i] = pow(10.0, En);
+		acc[i] = PrintAccSrc(hTau, En, (En + step));
+		
+		totalA += acc[i];
+		En += step;
+	}
+	
+	TCanvas *accVE = new TCanvas("accVE", "Acceptance v. Neutrino Energy", 1300, 900);
+    TGraph *accVSEplot = new TGraph(nSteps, eng, acc);
+    accVSEplot->SetLineColor(2);
+	accVSEplot->SetLineWidth(4);
+	accVSEplot->SetTitle("Plot of Acceptance Vs. Neutino Energy");
+	accVSEplot->GetYaxis()->SetTitle("Acceptance [cm^{2}]");
+	accVSEplot->GetXaxis()->SetTitle("Neutrino Energy [GeV]");
+	accVE->SetLogy(1);
+	accVE->SetLogx(1);
+	accVE->SetGridx(1);
+	accVE->SetGridy(1);
+	accVSEplot->Draw("AC");
+	
+	cout<<"Total instant acceptance of source: "<<totalA<<" cm^2 over evergy range 10^"<<min<<" GeV to 10^"<<max<<" GeV."<<endl;
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -3982,9 +4232,11 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-//~ PlotAcceptanceSkymaps(hTau);
+PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
-GetEventVEnergy(hTau);
+//~ GetEventVEnergy(hTau);
+//~ PrintAccSrc(hTau, 6.0, 6.5);
+//~ PlotSrcInstantAccVsE(hTau);
 
 /*
 cout<<"DEBUGGING"<<endl;
