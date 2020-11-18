@@ -3042,7 +3042,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	gPad->SetLogz(1);
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
-	in.open("txsflare.txt"); //open ephem file
+	in.open("1yr.txt"); //open ephem file
 	//~ return;
 	for(int r = -180; r <= 180; r++) { //filling the instant sky converage histogram
 		for(int d = -90; d <= 90; d++) {
@@ -3167,11 +3167,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	gStyle->SetPalette(56);
 	//~ return;//testing
 	
-	Double_t totalT = 0, totalAcc = 0;
+	Double_t totalT = 0, totalAcc = 0, gammarayAcc = 0;
 	//calculations for the time evolution of the horizontal skymaps over various coordinate systems
 	if (in.is_open())
 	{
-		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted; 
+		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted, totAccDay = 0; 
 		//~ Double_t origLST;
 		string sTimeS, rTimeS, rTimeM, sTimeM, phM;
 		bool nestNone = false, nestSun = false, nestBoth = false;
@@ -3190,6 +3190,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			nestNone = false;
 			nestSun = false;
 			nestBoth = false;
+			
+			totAccDay = 0;
 			
 			//moon phase calculations
 			if(phaseMoon < 0.3) {
@@ -3340,7 +3342,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 							!(nestSun && LST > riseTimeMoon && LST < setTimeMoon) && 
 							!(nestBoth && ( (LST > riseTimeMoon && LST < 360.) || (LST > 0 && LST < setTimeMoon) ) ) ) 
 							{ 
-								skymapProjEq->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240); //240 sec = 1 degree of RA
+								skymapProjEq->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240.0); //240 sec = 1 degree of RA
+								totAccDay += skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240.0;
 								//~ nuevents->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240 * normInverse * Fnaught / pow(Enaught, -nuIndex));
 							} 
 					}
@@ -3349,6 +3352,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 				if(LST > 360.0)
 					LST -= 360.0;
 			}
+			gammarayAcc += totAccDay * (deltaT / 360.) / (4. * pi);
 		}
 		//galactic & supergal projections done w.r.t the equatorial plot after time evolution has finished
 		for(int l = -180; l <= 180; l++)
@@ -3394,7 +3398,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	//printing observation time, acceptance, and duty cycle
 	cout<<"Total observation time: "<<totalT * (24.0 / 360.0)<<" hours."<<endl;
 	cout<<"Total Acceptance over "<<totalT * (24.0 / 360.0)<<" hours: "<<totalAcc<<endl;
-	//~ cout<<"Duty Cycle: "<<totalT * (24.0 / 360.0) * (1/8760.) * 100.<<" percent"<<endl; //1 year
+	cout<<"Duty Cycle: "<<totalT * (1. / (360. * 365.)) * 100.<<" percent"<<endl; //1 year
 	//~ cout<<"Duty Cycle: "<<totalT * (24.0 / 360.0) * (1/87600.0) * 100.<<" percent"<<endl; //10 years
 	
 	//initializing and formatting graphical elements for the galactic coordinate skymap
@@ -3647,6 +3651,9 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"Auger Dipole Events: "<<nuevents->GetBinContent((int)(-99.7352 + 181), (int)(-25.7697 + 91))<<endl; 
 	cout<<"Fornax Events: "<<nuevents->GetBinContent((int)(-50.1778 + 181), (int)(-33.73 + 91))<<endl; 
 	cout<<"TA Hotspot Events: "<<nuevents->GetBinContent((int)(-133.503 + 181), (int)(43.1166 + 91))<<endl;
+	
+	cout<<"Gamma ray burst acceptance (calculated per day): "<<gammarayAcc<<endl;
+	cout<<"Gamma ray burst acceptance (calculated over 1 year): "<<totalAcc * (totalT / (360. * 365.)) / (4. * pi)<<endl;
 }
 
 Double_t GetEventSingleSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
@@ -4092,6 +4099,84 @@ void PlotSrcInstantAccVsE(TH1D *hTau)
 	cout<<"Total instant acceptance of source: "<<totalA<<" cm^2 over evergy range 10^"<<min<<" GeV to 10^"<<max<<" GeV."<<endl;
 }
 
+void SrcEventTest(TH1D *hTau)
+{
+	latitude = 38.52028; //lat of frisco peak, utah
+	tStep = 2.5; //10 min step in degrees
+	yMin = 20; //min distance from telescope where tau comes out of the ground in km
+	yMax = 26;
+	DeltaAngleAz = 0.1; //azimuth angle step
+	DeltaAngle = 0.1; //elevation angle step
+	MaxAzimuth = 180.; //max azi angle
+	MaxElevation = 40; //max elv angle 
+	bCombined = kTRUE; //both flor and cher events considered
+	Double_t logEmin = 6.0; //min energy log
+    Double_t logEmax = 10.0; //max energy log
+    Double_t LST = 82;
+	Double_t degconv = pi/180.0;
+	Double_t srcRA = 77.35811176;
+	Double_t srcDec = 5.69314237;
+	Double_t Enaught = 100000; //GeV from IceCube paper (100 TeV)
+	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
+	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
+	
+	//values from differential sensitivity calculations
+    yDelta = 5.0; //5
+    iConfig = 2; //telescope altitude
+    Double_t dFoV = 2;  //test 0, 1, 2, 10
+    tanFoV = tan(dFoV/180.*pi);
+    dFoVBelow =  3/180.*pi; 
+    iMirrorSize = 2;
+    dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
+    dMinLength = 0.3;
+    //~ multNorm = kFALSE;
+    
+    TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle111","Acceptance Skymap of Single Azimuth Angle [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
+	TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep111","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
+	
+	GetAcceptanceSingleAngle(logEmin, logEmax, hTau, skymapSingleAngle);
+	
+	for(int yBins = 1; yBins <= skymapSingleAngle->GetNbinsY(); yBins++)
+    {
+		Double_t comboBin = 0;
+		for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			comboBin += skymapSingleAngle->GetBinContent(xBins, yBins);
+		for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			skymapFull360Sweep->SetBinContent(xBins, yBins, comboBin);
+	}
+	
+	Double_t acc = 0, totalacc = 0, tcross = 0;
+	
+	for(int i = 0; i < (int)((254 - 82) / tStep); i++)
+	{
+		Double_t az = (atan2(sin((LST - srcRA) * degconv), cos((LST - srcRA) * degconv) * sin(latitude * degconv) - tan(srcDec * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+		Double_t alt = asin(sin(latitude * degconv) * sin(srcDec * degconv) + cos(latitude * degconv) * cos(srcDec * degconv) * cos((LST - srcRA) * degconv)) * 180 / pi;
+		if(az > 180.0)
+			az = az - 360.0;
+		else if(az < -180.0)
+			az = az + 360.0;
+		int xBin = (int)((az + 180.1) * 10);
+		int yBin = (int)((alt + 90.1) * 10);
+		
+		if(skymapFull360Sweep->GetBinContent(xBin, yBin) > 0)
+		{
+			acc += skymapFull360Sweep->GetBinContent(xBin, yBin) * tStep * 240.0;
+			tcross += tStep;
+		}
+		
+		LST += tStep;
+	}
+	
+	totalacc = acc * 158.0;
+	
+	cout<<"Acceptance from source from single night observation: "<<acc<<endl;
+	cout<<"Extrapolated acceptance from 158 days of observation: "<<totalacc<<endl;
+	cout<<"Amount of time the souce was in view for single observation: "<<tcross * (24.0 / 360.0)<< "hours"<<endl;
+	cout<<"Amount of time the souce was in view for 158 days of observation: "<<tcross * (24.0 / 360.0) * 158.0<<" hours"<<endl;
+	cout<<"Total number of events from source over 158 days of observation: "<<totalacc * normInverse * Fnaught / pow(Enaught, -nuIndex)<<endl;
+	
+}
+
 ////////////////////////////////////////////////////////////////////
 // Main Program
 //
@@ -4237,6 +4322,7 @@ PlotAcceptanceSkymaps(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
 //~ PlotSrcInstantAccVsE(hTau);
+//~ SrcEventTest(hTau);
 
 /*
 cout<<"DEBUGGING"<<endl;
