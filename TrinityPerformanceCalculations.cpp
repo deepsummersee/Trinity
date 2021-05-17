@@ -10,7 +10,7 @@
 #include <TH2F.h>
 #include <TMarker.h>
 #include <TText.h>
-
+#include <TFile.h>
 #include <TROOT.h>
 #include <TApplication.h>
 
@@ -84,7 +84,7 @@ Double_t yDelta = 1;
 Double_t MaxElevation = 10; //elevation angle (determines path through Earth;
 Double_t DeltaAngle = 0.1; //steps in azimuth and elevation 
 Double_t DeltaAngleAz = 0.1; //steps in azimuth  
-Double_t nuIndex = 2.2; //power law index of the neutrino spectrum the minus sign is added later
+Double_t nuIndex = 2.; //power law index of the neutrino spectrum the minus sign is added later
 Double_t dMaxCherenkovAzimuthAngle = 40.0; //maximum azimuth angle for cherenkov 
 Double_t dMaxFluorescenceDistance = 100;
 
@@ -2463,13 +2463,13 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
     Double_t dLogEnergyStep = 0.2; //0.2
     Double_t dHalfEnergyBinWidth =1/2.; //in log was 1/2
     Double_t logEmin = 6; //7
-    Double_t logEmax = 10.5; //11
+    Double_t logEmax = 10; //11
 
     bCombined = kTRUE;
-    yMin = 5; //5
-    yMax = 500; //500
+    yMin = 20; //5
+    yMax = 26; //500
     yDelta = 5; //5
-    MaxElevation = 20; //elevation angle (determines path through Earth;
+    MaxElevation = 24; //elevation angle (determines path through Earth;
     DeltaAngle = 0.1; //steps in azimuth and elevation 
 
     iConfig = 2; //telescope altitude
@@ -2520,7 +2520,6 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
 
   
 
-
     //Move in steps from lowest to highes energy
     Double_t dLogE = logEmin;
     Int_t n=0;
@@ -2543,7 +2542,7 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
 
               //Calculate the Sensitivity as done by the Nu Community
               bMonoNu = kTRUE; //calculate the acceptance at Enu bin center
-              //~ dAcceptance = CalculateAcceptance(dLogE-dHalfEnergyBinWidth,dLogE+dHalfEnergyBinWidth,grDiffAcceptance,hTau);
+              dAcceptance = CalculateAcceptance(dLogE-dHalfEnergyBinWidth,dLogE+dHalfEnergyBinWidth,grDiffAcceptance,hTau);
               grAcceptanceMonoEnergy->SetPoint(n,pow(10,dLogE),dAcceptance);
               bMonoNu = kFALSE;
               dnuFnu = 3 * 2.44 / dAcceptance / dExposure / log(10) / (2*dHalfEnergyBinWidth) * pow(10,dLogE); //2.44 is from Feldman Cousin 90% confidence upper limit
@@ -2569,7 +2568,11 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
           dLogE+=dLogEnergyStep;
        }
 
-
+	cout<<"Number of points: "<<n<<endl;
+	for(int i = 0; i <= n; i++)
+	{
+		cout<<grAcceptance->GetPointX(i)<<" , "<<grAcceptance->GetPointY(i)<<endl;
+	}
   cDiffSensitivity->cd();
   TLegend *legend = new TLegend(0.53,0.7,0.75,0.88);
   TString legstr;
@@ -2897,12 +2900,12 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	MaxAzimuth = 180.; //max azi angle
 	MaxElevation = 40; //max elv angle 
 	bCombined = kTRUE; //both flor and cher events considered
-	Double_t logEmin = 6.0; //min energy log
-    Double_t logEmax = 10.0; //max energy log
+	Double_t logEmin = 6; //min energy log
+    Double_t logEmax = 10; //max energy log
     Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-	Double_t Enaught = 100000; //GeV from IceCube paper (100 TeV)
-	Double_t Fnaught = 1.6e-18; //TeV^-1 cm^-2 s^-1 flux normalization at 100 TeV from IceCube paper over ~158 day period
+	Double_t Enaught = 1; //GeV
+	Double_t Fnaught = 6.694e-23; //GeV^-1 cm^-2 s^-1
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
 	//~ normInverse = 1.0;
 	//~ multNorm = kFALSE;
@@ -2918,31 +2921,36 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     dMinLength = 0.3;
 	
 	//new canvas for the horizontal skymaps, markers and labels for galactic landmarks
+	int nMarks = 11;
 	TCanvas *skyC = new TCanvas("skyC","Skymap of Acceptance",1600,750); 
-	TMarker *galMarks[10];
-	TMarker *galMarksSup[10];
-	TMarker *galMarksEq[10];
-	TMarker *galMarksEqI[10];
-	TText *labels[10];
-	TText *labelsSup[10];
-	TText *labelsEq[10];
-	TText *labelsEqI[10];
+	TMarker *galMarks[nMarks];
+	TMarker *galMarksSup[nMarks];
+	TMarker *galMarksEq[nMarks];
+	TMarker *galMarksEqI[nMarks];
+	TMarker *galMarksEqT[nMarks];
+	TText *labels[nMarks];
+	TText *labelsSup[nMarks];
+	TText *labelsEq[nMarks];
+	TText *labelsEqI[nMarks];
+	TText *labelsEqT[nMarks];
 	TPad *pad1 = new TPad("pad1","",0,0,1,1);
 	
 	//marker initialization
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < nMarks; i++) {
 		galMarks[i] = new TMarker(0.,0., 43);
 		galMarksSup[i] = new TMarker(0.,0., 43);
 		galMarksEq[i] = new TMarker(0.,0., 43);
 		galMarksEqI[i] = new TMarker(0.,0., 43);
+		galMarksEqT[i] = new TMarker(0.,0., 43);
 		galMarks[i]->SetMarkerSize(1.5);
 		galMarksSup[i]->SetMarkerSize(1.5);
 		galMarksEq[i]->SetMarkerSize(1.5);
 		galMarksEqI[i]->SetMarkerSize(1.5);
+		galMarksEqT[i]->SetMarkerSize(1.5);
 	}
 
 	//label initialization
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < nMarks; i++) {
 		labels[i] = new TText();
 		labels[i]->SetTextSize(20);
 		labels[i]->SetTextFont(43);
@@ -2959,6 +2967,10 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		labelsEqI[i]->SetTextSize(20);
 		labelsEqI[i]->SetTextFont(43);
 		labelsEqI[i]->SetTextAlign(22);
+		labelsEqT[i] = new TText();
+		labelsEqT[i]->SetTextSize(20);
+		labelsEqT[i]->SetTextFont(43);
+		labelsEqT[i]->SetTextAlign(22);
 	}
 	
 	//pad init
@@ -3007,11 +3019,13 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	//2D histograms for various skymaps + histogram to store number of neutrino events
 	TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle","Acceptance Skymap of Single Azimuth Angle", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
 	TH2F *skymapFull360Sweep = new TH2F("skymapFull360Sweep","Acceptance Skymap of 360 Degree Airshower Azimuth Sweep", 3601, -180.05, 180.05, 1801, -90.05, 90.05);
-	TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over MJD 56937.81 to MJD 57096.21", 361, -180.05, 180.05, 181, -90.05, 90.05); //galactic
-	TH2F *skymapProjSuperGal = new TH2F("skymapProjSuperGal","360 FoV Projection In Supergalactic Coordinates Over MJD 56937.81 to MJD 57096.21", 361, -180.05, 180.05, 181, -90.05, 90.05); //supergal
-	TH2F *skymapProjEq = new TH2F("skymapProjEq","360 FoV Projection In Equatorial Coordinates Over MJD 56937.81 to MJD 57096.21", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
+	TH2F *skymapFullProjection = new TH2F("skymapFullProjection","360 FoV Projection In Galactic Coordinates Over 1 Year of Exposure", 361, -180.05, 180.05, 181, -90.05, 90.05); //galactic
+	TH2F *skymapProjSuperGal = new TH2F("skymapProjSuperGal","360 FoV Projection In Supergalactic Coordinates Over 1 Year of Exposure", 361, -180.05, 180.05, 181, -90.05, 90.05); //supergal
+	TH2F *skymapProjEq = new TH2F("skymapProjEq","360 FoV Projection In Equatorial Coordinates Over 1 Year of Exposure", 361, -180.05, 180.05, 181, -90.05, 90.05); //equatorial
 	TH2F *skymapInstantConverage = new TH2F("skymapInstantConverage","Instantanious Sky Coverage In Equatorial Coordinates", 361, -180.05, 180.05, 181, -90.05, 90.05); //histogram for instant sky coverage
 	TH2F *nuevents = (TH2F*)skymapProjEq->Clone("nuevents");
+	TH2F *TT = (TH2F*)skymapFull360Sweep->Clone("TT");
+	TH2F *skymapTimeExp = new TH2F("skymapTimeExp","Souce Exposure Times", 361, -180.05, 180.05, 181, -90.05, 90.05);
 	
 	//histogram formatting
 	skymapSingleAngle->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
@@ -3019,6 +3033,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     skymapFull360Sweep->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
     skymapFull360Sweep->GetYaxis()->SetTitle("Elevation Angle [degrees]");
     skyC->Divide(2,1);
+    
     
     //getting the single angle acceptance according to the variables above 
     GetAcceptanceSingleAngle(logEmin, logEmax, hTau, skymapSingleAngle);
@@ -3032,6 +3047,14 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			comboBin += skymapSingleAngle->GetBinContent(xBins, yBins);
 		for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
 			skymapFull360Sweep->SetBinContent(xBins, yBins, comboBin);
+	}
+	
+	Double_t vFov = 0;
+	
+	for(int i = 1; i <= skymapFull360Sweep->GetNbinsY(); i++)
+	{
+		if(skymapFull360Sweep->GetBinContent(4, i) > 0)
+			vFov += 0.1;
 	}
 	
 	skyC->cd(1);
@@ -3077,9 +3100,23 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	skyProjInstantEq->cd(1);
 	skyProjInstantEq->SetRightMargin(0.2);
 	
-	skymapInstantConverage->GetXaxis()->SetTitle("Right Ascension [deg]");
+	skymapInstantConverage->GetXaxis()->SetTitle("Right Ascension [hours]");
 	skymapInstantConverage->GetYaxis()->SetTitle("Declination [deg]");
 	skymapInstantConverage->GetZaxis()->SetTitle("Acceptance [cm^{2}]");
+	skymapInstantConverage->GetXaxis()->SetNdivisions(-512);
+	skymapInstantConverage->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+	skymapInstantConverage->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
 	skymapInstantConverage->Draw("z aitoff");
 	padI->Draw();
 	
@@ -3112,6 +3149,9 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	
 	galMarksEqI[9]->SetX(-102.613); //TA Hotspot
 	galMarksEqI[9]->SetY(52.2853);
+	
+	galMarksEqI[10]->SetX(-40.6698); //NGC 1068
+	galMarksEqI[10]->SetY(-0.0135745);
 	
 	//~ galMarksEqI[0]->SetX(0); //galactic center
 	//~ galMarksEqI[0]->SetY(0);
@@ -3153,25 +3193,38 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	labelsEqI[7]->SetText(galMarksEqI[7]->GetX() - 7, galMarksEqI[7]->GetY() -5, "Auger Dipole");
 	labelsEqI[8]->SetText(galMarksEqI[8]->GetX(), galMarksEqI[8]->GetY() -5, "Fornax");
 	labelsEqI[9]->SetText(galMarksEqI[9]->GetX() + 9, galMarksEqI[9]->GetY() -5, "TA Hotspot");
+	labelsEqI[10]->SetText(galMarksEqI[10]->GetX(), galMarksEqI[10]->GetY() -5, "NGC 1068");
 	
 	padI->cd();
 	
 	for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
 	for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
 	
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < nMarks; i++) {
 		galMarksEqI[i]->Draw();
 		labelsEqI[i]->Draw();
 	}
 	
-	gStyle->SetPalette(56);
+	//~ gStyle->SetPalette(52);
 	//~ return;//testing
 	
-	Double_t totalT = 0, totalAcc = 0, gammarayAcc = 0;
+	//~ return;
+	
+	TFile *f1 = new TFile("s360.root","RECREATE");
+	skymapFull360Sweep->Write();
+	f1->Close();
+	
+	TFile *f2 = new TFile("singleangle.root","RECREATE");
+	skymapSingleAngle->Write();
+	f2->Close();
+	
+	//~ return;
+	
+	Double_t totalT = 0, totalAcc = 0, maxT = 0, minT = 999999;
 	//calculations for the time evolution of the horizontal skymaps over various coordinate systems
 	if (in.is_open())
 	{
-		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted, totAccDay = 0; 
+		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted; 
 		//~ Double_t origLST;
 		string sTimeS, rTimeS, rTimeM, sTimeM, phM;
 		bool nestNone = false, nestSun = false, nestBoth = false;
@@ -3190,8 +3243,6 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			nestNone = false;
 			nestSun = false;
 			nestBoth = false;
-			
-			totAccDay = 0;
 			
 			//moon phase calculations
 			if(phaseMoon < 0.3) {
@@ -3260,6 +3311,27 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			totalT += deltaT;
 			nSteps = (int)(deltaT / tStep);
 			tStepAdjusted = deltaT / nSteps;
+			
+			int yBinMax = 900;
+			int yBinMin = 662;
+	
+			for(int yBins = yBinMin; yBins <= yBinMax; yBins++)
+			{
+				for(int xBins = 1; xBins <= TT->GetNbinsX(); xBins++)
+				{
+					TT->SetBinContent(xBins, yBins, tStepAdjusted * (24.0 / 360.0));
+				}
+			}
+			
+			if(deltaT > maxT)
+			{
+				maxT = deltaT;
+			}
+			
+			if(deltaT < minT)
+			{
+				minT = deltaT;
+			}
 			//~ origLST = LST;
 			/*
 			for(int i = 0; i < nSteps; i++) { //galactic
@@ -3343,7 +3415,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 							!(nestBoth && ( (LST > riseTimeMoon && LST < 360.) || (LST > 0 && LST < setTimeMoon) ) ) ) 
 							{ 
 								skymapProjEq->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240.0); //240 sec = 1 degree of RA
-								totAccDay += skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240.0;
+								skymapTimeExp->Fill((-1 * r), d, TT->GetBinContent(xBin, yBin));
 								//~ nuevents->Fill((-1 * r), d, skymapFull360Sweep->GetBinContent(xBin, yBin) * tStepAdjusted * 240 * normInverse * Fnaught / pow(Enaught, -nuIndex));
 							} 
 					}
@@ -3352,7 +3424,6 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 				if(LST > 360.0)
 					LST -= 360.0;
 			}
-			gammarayAcc += totAccDay * (deltaT / 360.) / (4. * pi);
 		}
 		//galactic & supergal projections done w.r.t the equatorial plot after time evolution has finished
 		for(int l = -180; l <= 180; l++)
@@ -3398,8 +3469,21 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	//printing observation time, acceptance, and duty cycle
 	cout<<"Total observation time: "<<totalT * (24.0 / 360.0)<<" hours."<<endl;
 	cout<<"Total Acceptance over "<<totalT * (24.0 / 360.0)<<" hours: "<<totalAcc<<endl;
-	cout<<"Duty Cycle: "<<totalT * (1. / (360. * 365.)) * 100.<<" percent"<<endl; //1 year
+	cout<<"Duty Cycle: "<<totalT / (365.25 * 360.) * 100.<<" percent"<<endl; //1 year
+	cout<<"Total events observed: "<<totalAcc * normInverse * Fnaught / pow(Enaught, -nuIndex)<<" events/sr"<<endl;
 	//~ cout<<"Duty Cycle: "<<totalT * (24.0 / 360.0) * (1/87600.0) * 100.<<" percent"<<endl; //10 years
+	cout<<"Longest observation window: "<<maxT * (24.0 / 360.0)<<" hours."<<endl;
+	cout<<"Shortest observation window: "<<minT * (24.0 / 360.0)<<" hours."<<endl;
+	cout<<"Average observation time per night: "<<totalT * (24.0 / 360.0) / 365.25<<" hours."<<endl;
+	
+	cout<<"Vertical FoV of telescope (deg): "<<vFov<<endl;
+	cout<<"Horizontal FoV of telescope (deg): "<<360<<endl;
+	cout<<"Area of FoV: "<<(vFov * 360.) * (pi * pi) / (180. * 180.)<<" sr"<<endl;
+	cout<<"Rate of gamma-ray bursts observed per day: "<<((vFov * 360.) * (pi * pi) / (180. * 180.)) / (4. * pi)<<endl;
+	cout<<"Rate of gamma-ray bursts observed per year: "<<((vFov * 360.) * (pi * pi) / (180. * 180.)) / (4. * pi) * 365.25<<endl;
+	cout<<"Rate of gamma-ray bursts observed per day with duty cycle: "<<((vFov * 360.) * (pi * pi) / (180. * 180.)) / (4. * pi) * totalT / (365.25 * 360.)<<endl;
+	cout<<"Rate of gamma-ray bursts observed per year with duty cycle: "<<((vFov * 360.) * (pi * pi) / (180. * 180.)) / (4. * pi) * 365.25 * totalT / (365.25 * 360.)<<endl;
+	
 	
 	//initializing and formatting graphical elements for the galactic coordinate skymap
 	TCanvas *skyProjC = new TCanvas("skyProjC","Skymap Projection (Galactic Coordinates)",1500,750); //canvas for galactic skymap projections
@@ -3408,9 +3492,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	
 	TPad *pad2 = (TPad*)pad1->Clone("pad2");
 	TPad *pad3 = (TPad*)pad1->Clone("pad3");
+	TPad *pad4 = (TPad*)pad1->Clone("pad4");
 	
 	skyProjC->cd(1);
-	gStyle->SetPalette(56);
+	//~ gStyle->SetPalette(52);
+	//~ TColor::InvertPalette();
 	skyProjC->SetRightMargin(0.2);
 	skymapFullProjection->GetXaxis()->SetTitle("Galactic Longitude [deg]");
 	skymapFullProjection->GetYaxis()->SetTitle("Galactic Latitude [deg]");
@@ -3459,6 +3545,9 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	galMarks[9]->SetX(-136.706); //TA Hotspot
 	galMarks[9]->SetY(57.3636);
 	
+	galMarks[10]->SetX(-107.824); //NGC
+	galMarks[10]->SetY(-69.0034);
+	
 	labels[0]->SetText(galMarks[0]->GetX(), galMarks[0]->GetY() -5, "Galactic Center");
 	labels[1]->SetText(galMarks[1]->GetX(), galMarks[1]->GetY() -5, "TXS 0506+056");
 	labels[2]->SetText(galMarks[2]->GetX(), galMarks[2]->GetY() -5, "MRK 501");
@@ -3469,13 +3558,14 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	labels[7]->SetText(galMarks[7]->GetX(), galMarks[7]->GetY() -5, "Auger Dipole");
 	labels[8]->SetText(galMarks[8]->GetX(), galMarks[8]->GetY() -5, "Fornax");
 	labels[9]->SetText(galMarks[9]->GetX(), galMarks[9]->GetY() -5, "TA Hotspot");
+	labels[10]->SetText(galMarks[10]->GetX(), galMarks[10]->GetY() -5, "NGC 1068");
 	
 	pad1->cd();
 	
 	for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
 	for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
 	
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < nMarks; i++) {
 		galMarks[i]->Draw();
 		labels[i]->Draw();
 	}
@@ -3521,6 +3611,9 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	galMarksSup[9]->SetX(-46.701); //TA Hotspot
 	galMarksSup[9]->SetY(-25.9257);
 	
+	galMarksSup[10]->SetX(51.7886); //NGC
+	galMarksSup[10]->SetY(-26.825);
+	
 	labelsSup[0]->SetText(galMarksSup[0]->GetX(), galMarksSup[0]->GetY() -5, "Galactic Center");
 	labelsSup[1]->SetText(galMarksSup[1]->GetX(), galMarksSup[1]->GetY() -5, "TXS 0506+056");
 	labelsSup[2]->SetText(galMarksSup[2]->GetX(), galMarksSup[2]->GetY() -5, "MRK 501");
@@ -3531,13 +3624,14 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	labelsSup[7]->SetText(galMarksSup[7]->GetX(), galMarksSup[7]->GetY() -5, "Auger Dipole");
 	labelsSup[8]->SetText(galMarksSup[8]->GetX(), galMarksSup[8]->GetY() -5, "Fornax");
 	labelsSup[9]->SetText(galMarksSup[9]->GetX(), galMarksSup[9]->GetY() -5, "TA Hotspot");
+	labelsSup[10]->SetText(galMarksSup[10]->GetX(), galMarksSup[10]->GetY() -5, "NGC 1068");
 	
 	pad2->cd();
 	
 	for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
 	for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
 	
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < nMarks; i++) {
 		galMarksSup[i]->Draw();
 		labelsSup[i]->Draw();
 	}
@@ -3547,9 +3641,23 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	
 	skyProjCEq->cd(1);
 	skyProjCEq->SetRightMargin(0.2);
-	skymapProjEq->GetXaxis()->SetTitle("Right Ascension [deg]");
+	skymapProjEq->GetXaxis()->SetTitle("Right Ascension [hours]");
 	skymapProjEq->GetYaxis()->SetTitle("Declination [deg]");
 	skymapProjEq->GetZaxis()->SetTitle("Acceptance [cm^{2} s]");
+	skymapProjEq->GetXaxis()->SetNdivisions(-512);
+	skymapProjEq->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+	skymapProjEq->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+	skymapProjEq->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+	skymapProjEq->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+	skymapProjEq->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+	skymapProjEq->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+	skymapProjEq->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+	skymapProjEq->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+	skymapProjEq->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+	skymapProjEq->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+	skymapProjEq->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+	skymapProjEq->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+	skymapProjEq->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
 	skymapProjEq->Draw("z aitoff");
 	pad3->Draw();
 	
@@ -3583,6 +3691,9 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	galMarksEq[9]->SetX(-102.613); //TA Hotspot
 	galMarksEq[9]->SetY(52.2853);
 	
+	galMarksEq[10]->SetX(-40.6698); //NGC
+	galMarksEq[10]->SetY(-0.0135745);
+	
 	labelsEq[0]->SetText(galMarksEq[0]->GetX(), galMarksEq[0]->GetY() -5, "Galactic Center");
 	labelsEq[1]->SetText(galMarksEq[1]->GetX(), galMarksEq[1]->GetY() -5, "TXS 0506+056");
 	labelsEq[2]->SetText(galMarksEq[2]->GetX(), galMarksEq[2]->GetY() -5, "MRK 501");
@@ -3593,17 +3704,125 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	labelsEq[7]->SetText(galMarksEq[7]->GetX(), galMarksEq[7]->GetY() -5, "Auger Dipole");
 	labelsEq[8]->SetText(galMarksEq[8]->GetX(), galMarksEq[8]->GetY() -5, "Fornax");
 	labelsEq[9]->SetText(galMarksEq[9]->GetX(), galMarksEq[9]->GetY() -5, "TA Hotspot");
+	labelsEq[10]->SetText(galMarksEq[10]->GetX(), galMarksEq[10]->GetY() -5, "NGC 1068");
 	
 	pad3->cd();
 	
 	for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
 	for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
 	
-	for(int i = 0; i < 10; i++) {
+	for(int i = 0; i < nMarks; i++) {
 		galMarksEq[i]->Draw();
 		labelsEq[i]->Draw();
 	}
 	
+	//Piss();
+	TCanvas *skyTimeExpC = new TCanvas("skyTimeExpC","Skymap Time Exposure",1500,750);
+	skyTimeExpC->cd(1);
+	skyTimeExpC->SetRightMargin(0.2);
+	
+	skymapTimeExp->GetXaxis()->SetTitle("Right Ascension [hours]");
+	skymapTimeExp->GetYaxis()->SetTitle("Declination [deg]");
+	skymapTimeExp->GetZaxis()->SetTitle("Hours of Exposure");
+	skymapTimeExp->GetXaxis()->SetNdivisions(-512);
+	skymapTimeExp->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+	skymapTimeExp->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+	skymapTimeExp->Draw("z aitoff");
+	pad4->Draw();
+	
+	galMarksEqT[0]->SetX(84.7649); //galactic center
+	galMarksEqT[0]->SetY(-32.1444);
+	
+	galMarksEqT[1]->SetX(-77.0868); //TXS
+	galMarksEqT[1]->SetY(6.1484);
+	
+	galMarksEqT[2]->SetX(86.8957); //MRK 501
+	galMarksEqT[2]->SetY(45.1052);
+	
+	galMarksEqT[3]->SetX(-132.496); //MRK 421
+	galMarksEqT[3]->SetY(52.534);
+	
+	galMarksEqT[4]->SetX(161.754); //Virgo
+	galMarksEqT[4]->SetY(-9.72109);
+	
+	galMarksEqT[5]->SetX(49.3004); //cygnus A
+	galMarksEqT[5]->SetY(42.3715);
+	
+	galMarksEqT[6]->SetX(119.23); // Cen A
+	galMarksEqT[6]->SetY(-56.6101);
+	
+	galMarksEqT[7]->SetX(-92.1939); //Auger Dipole
+	galMarksEqT[7]->SetY(-29.1072);
+	
+	galMarksEqT[8]->SetX(-44.1018); //Fornax
+	galMarksEqT[8]->SetY(-34.7217);
+	
+	galMarksEqT[9]->SetX(-102.613); //TA Hotspot
+	galMarksEqT[9]->SetY(52.2853);
+	
+	galMarksEqT[10]->SetX(-40.6698); //NGC 1068
+	galMarksEqT[10]->SetY(-0.0135745);
+	
+	labelsEqT[0]->SetText(galMarksEq[0]->GetX(), galMarksEq[0]->GetY() -5, "Galactic Center");
+	labelsEqT[1]->SetText(galMarksEq[1]->GetX(), galMarksEq[1]->GetY() -5, "TXS 0506+056");
+	labelsEqT[2]->SetText(galMarksEq[2]->GetX(), galMarksEq[2]->GetY() -5, "MRK 501");
+	labelsEqT[3]->SetText(galMarksEq[3]->GetX(), galMarksEq[3]->GetY() +5, "MRK 421");
+	labelsEqT[4]->SetText(galMarksEq[4]->GetX(), galMarksEq[4]->GetY() -5, "Virgo");
+	labelsEqT[5]->SetText(galMarksEq[5]->GetX(), galMarksEq[5]->GetY() -5, "Cygnus A");
+	labelsEqT[6]->SetText(galMarksEq[6]->GetX(), galMarksEq[6]->GetY() -5, "Cen A");
+	labelsEqT[7]->SetText(galMarksEq[7]->GetX(), galMarksEq[7]->GetY() -5, "Auger Dipole");
+	labelsEqT[8]->SetText(galMarksEq[8]->GetX(), galMarksEq[8]->GetY() -5, "Fornax");
+	labelsEqT[9]->SetText(galMarksEq[9]->GetX(), galMarksEq[9]->GetY() -5, "TA Hotspot");
+	labelsEqT[10]->SetText(galMarksEq[10]->GetX(), galMarksEq[10]->GetY() -5, "NGC 1068");
+	
+	pad4->cd();
+	
+	for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
+	for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
+	
+	for(int i = 0; i < nMarks; i++) {
+		galMarksEq[i]->Draw();
+		labelsEq[i]->Draw();
+	}
+	
+	//color formatting
+	const Int_t Number = 9;
+	Double_t Red[Number]    = { 242./255., 234./255., 237./255., 230./255., 212./255., 156./255., 99./255., 45./255., 0./255.};
+	Double_t Green[Number]  = { 243./255., 238./255., 238./255., 168./255., 101./255.,  45./255.,  0./255.,  0./255., 0./255.};
+	Double_t Blue[Number]   = { 230./255.,  95./255.,  11./255.,   8./255.,   9./255.,   3./255.,  1./255.,  1./255., 0./255.};
+	Double_t Length[Number] = { 0.0000, 0.1250, 0.2500, 0.3750, 0.5000, 0.6250, 0.7500, 0.8750, 1.0000};
+	Int_t nb=99;
+	TColor::CreateGradientColorTable(Number,Length,Red,Green,Blue,nb);
+	skymapProjEq->SetContour(nb);
+	skymapProjSuperGal->SetContour(nb);
+	skymapFullProjection->SetContour(nb);
+	skymapInstantConverage->SetContour(nb);
+	skymapTimeExp->SetContour(nb);
+	
+	
+	TFile *f = new TFile("eq.root","RECREATE");
+	skymapProjEq->Write();
+	f->Close();
+	TFile *ff = new TFile("gal.root","RECREATE");
+	skymapFullProjection->Write();
+	ff->Close();
+	TFile *fff = new TFile("supgal.root","RECREATE");
+	skymapProjSuperGal->Write();
+	fff->Close();
+	TFile *ffff = new TFile("insteq.root","RECREATE");
+	skyProjInstantEq->Write();
+	ffff->Close();
 	
 	//Printing the specific acceptances and number of neutrino events of different galactic landmarks (commented out is for cross-checking acceptances over different coordinate systems to maintain consistancy)
 	//~ cout<<"Equatorial:"<<endl;
@@ -3617,6 +3836,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"Auger Dipole Acceptance: "<<skymapProjEq->GetBinContent((int)(-99.7352 + 181), (int)(-25.7697 + 91))<<endl; 
 	cout<<"Fornax Acceptance: "<<skymapProjEq->GetBinContent((int)(-50.1778 + 181), (int)(-33.73 + 91))<<endl; 
 	cout<<"TA Hotspot Acceptance: "<<skymapProjEq->GetBinContent((int)(-133.503 + 181), (int)(43.1166 + 91))<<endl; 
+	cout<<"NGC 1068 Acceptance: "<<skymapProjEq->GetBinContent((int)(-40.6698 + 181), (int)(-0.0132913 + 91))<<endl; 
 	//~ cout<<"Supergalactic:"<<endl;
 	//~ cout<<"Galacitc Center Acceptance: "<<skymapProjSuperGal->GetBinContent((int)(174.214 + 181), (int)(42.3103 + 91))<<endl; 
 	//~ cout<<"TXS 0506+056 Acceptance: "<<skymapProjSuperGal->GetBinContent((int)(26.2644 + 181), (int)(-56.2196 + 91))<<endl; 
@@ -3651,9 +3871,23 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"Auger Dipole Events: "<<nuevents->GetBinContent((int)(-99.7352 + 181), (int)(-25.7697 + 91))<<endl; 
 	cout<<"Fornax Events: "<<nuevents->GetBinContent((int)(-50.1778 + 181), (int)(-33.73 + 91))<<endl; 
 	cout<<"TA Hotspot Events: "<<nuevents->GetBinContent((int)(-133.503 + 181), (int)(43.1166 + 91))<<endl;
+	cout<<"NGC 1068 Events: "<<nuevents->GetBinContent((int)(-40.6698 + 181), (int)(-0.0132913 + 91))<<endl;
 	
-	cout<<"Gamma ray burst acceptance (calculated per day): "<<gammarayAcc<<endl;
-	cout<<"Gamma ray burst acceptance (calculated over 1 year): "<<totalAcc * (totalT / (360. * 365.)) / (4. * pi)<<endl;
+	int c = 0;
+	Double_t acc_t = 0;
+	int ra = 181 + 86;
+	
+	for(int i = 0; i < 90; i++)
+	{
+		acc_t += skymapProjEq->GetBinContent(ra, (i * (180 / 90) - 90.0) + 91);
+		cout << "Acc at dec " << (i * (180 / 90) - 90.0) << " deg : " << skymapProjEq->GetBinContent(ra, (i * (180 / 90) - 90.0) + 91) << endl;
+		if(skymapProjEq->GetBinContent(ra, (i * (180 / 90) - 90.0) + 91) > 0)
+		{
+			c++;
+		}
+	}
+	
+	cout<<"Avg: "<<acc_t/((double) c);
 }
 
 Double_t GetEventSingleSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
@@ -3869,11 +4103,11 @@ Double_t PrintAccSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
 	MaxAzimuth = 180.; //max azi angle
 	MaxElevation = 40; //max elv angle 
 	bCombined = kTRUE; //both flor and cher events considered
-	Double_t logEmin = minElog; //min energy log
-    Double_t logEmax = maxElog; //max energy log
+	Double_t logEmin = 6; //min energy log
+    Double_t logEmax = 10; //max energy log
     Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-	Double_t srcRA = 77.35811176;
+	Double_t srcRA = 77.35811176; //txs flare
 	Double_t srcDec = 5.69314237;
 	
 	//values from differential sensitivity calculations
@@ -4099,6 +4333,55 @@ void PlotSrcInstantAccVsE(TH1D *hTau)
 	cout<<"Total instant acceptance of source: "<<totalA<<" cm^2 over evergy range 10^"<<min<<" GeV to 10^"<<max<<" GeV."<<endl;
 }
 
+void PlotFlareFlux()
+{
+	Double_t logEmin = 6; //min energy log
+    Double_t logEmax = 10; //max energy log
+    Double_t Enaught = 1e8; //GeV norm
+	Double_t Fnaught[8];
+	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
+	
+	Double_t accs[8];
+	Double_t flareT[8];
+	
+	accs[0] = 1.30902e+09;
+	accs[1] = 1.30998e+09;
+	accs[2] = 1.30998e+09;
+	accs[3] = 1.30998e+09;
+	accs[4] = 1.07659e+11;
+	accs[5] = 7.29358e+11;
+	accs[6] = 1.56695e+12;
+	accs[7] = 7.32773e+12;
+	
+	flareT[0] = 1;
+	flareT[1] = 2;
+	flareT[2] = 3;
+	flareT[3] = 5;
+	flareT[4] = 24;
+	flareT[5] = 168;
+	flareT[6] = 744;
+	flareT[7] = 8760;
+	
+	for(int i = 0; i < 8; i++)
+	{
+		Fnaught[i] = pow(Enaught, -nuIndex) / (accs[i] * normInverse);
+		cout<<"Time: "<<flareT[i]<<" Flux: "<<Fnaught[i]<<endl;
+	}
+	
+	TCanvas *fluxT = new TCanvas("fluxT", "Flare Neutrino Flux vs. Flare Time", 1300, 900);
+    TGraph *fluxTplot = new TGraph(8, flareT, Fnaught);
+    fluxTplot->SetLineColor(2);
+	fluxTplot->SetLineWidth(4);
+	fluxTplot->SetTitle("Flare Neutrino Flux vs. Flare Time (10^{8} GeV Normalization) [RA: -86 deg, Dec: -46 deg]");
+	fluxTplot->GetYaxis()->SetTitle("Flux [GeV^{-1} cm^{-2} s^{-1}]");
+	fluxTplot->GetXaxis()->SetTitle("Time [hr]");
+	fluxT->SetLogy(1);
+	fluxT->SetLogx(1);
+	fluxT->SetGridx(1);
+	fluxT->SetGridy(1);
+	fluxTplot->Draw("ACP*");
+}
+
 void SrcEventTest(TH1D *hTau)
 {
 	latitude = 38.52028; //lat of frisco peak, utah
@@ -4175,6 +4458,183 @@ void SrcEventTest(TH1D *hTau)
 	cout<<"Amount of time the souce was in view for 158 days of observation: "<<tcross * (24.0 / 360.0) * 158.0<<" hours"<<endl;
 	cout<<"Total number of events from source over 158 days of observation: "<<totalacc * normInverse * Fnaught / pow(Enaught, -nuIndex)<<endl;
 	
+}
+
+void SrcFoVTime(TH1D *hTau)
+{
+	latitude = 38.52028; //lat of frisco peak, utah
+	tStep = 0.25;
+	yMin = 20; //min distance from telescope where tau comes out of the ground in km
+	yMax = 26;
+	DeltaAngleAz = 0.1; //azimuth angle step
+	DeltaAngle = 0.1; //elevation angle step
+	MaxAzimuth = 180.; //max azi angle
+	MaxElevation = 40; //max elv angle 
+	bCombined = kTRUE; //both flor and cher events considered
+	//~ Double_t logEmin = 6.0; //min energy log
+    //~ Double_t logEmax = 10.0; //max energy log
+    Double_t LST = -16;
+	Double_t degconv = pi/180.0;
+	Double_t srcRA = -86;
+	int nPoints = 90;
+	Double_t srcDec[nPoints];
+	Double_t srctCross[nPoints];
+	Double_t srcAcc[nPoints];
+	Double_t flareTime = 360;
+	
+	//values from differential sensitivity calculations
+    yDelta = 5.0; //5
+    iConfig = 2; //telescope altitude
+    Double_t dFoV = 2;  //test 0, 1, 2, 10
+    tanFoV = tan(dFoV/180.*pi);
+    dFoVBelow =  3/180.*pi; 
+    iMirrorSize = 2;
+    dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
+    dMinLength = 0.3;
+    //~ multNorm = kFALSE;
+    
+    //~ TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle111","Acceptance Skymap of Single Azimuth Angle [20 km to 150 km, 10^9 GeV]", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
+	TFile *fileD = TFile::Open("s360.root");
+	TH2F *skymapFull360Sweep = (TH2F*)fileD->Get("skymapFull360Sweep");
+	
+	//~ GetAcceptanceSingleAngle(logEmin, logEmax, hTau, skymapSingleAngle);
+	
+	//~ for(int yBins = 1; yBins <= skymapSingleAngle->GetNbinsY(); yBins++)
+    //~ {
+		//~ Double_t comboBin = 0;
+		//~ for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			//~ comboBin += skymapSingleAngle->GetBinContent(xBins, yBins);
+		//~ for(int xBins = 1; xBins <= skymapSingleAngle->GetNbinsX(); xBins++)
+			//~ skymapFull360Sweep->SetBinContent(xBins, yBins, comboBin);
+	//~ }
+	
+	for(int i = 0; i < nPoints; i++)
+	{
+		srcDec[i] = i * (180 / nPoints) - 90.0;
+		srctCross[i] = 0.0;
+		srcAcc[i] = 0.0;
+	}
+	
+	
+	for(int i = 0; i < (int)(360 / tStep); i++)
+	{
+		for(int j = 0; j < nPoints; j++)
+		{
+			Double_t az = (atan2(sin((LST - srcRA) * degconv), cos((LST - srcRA) * degconv) * sin(latitude * degconv) - tan(srcDec[j] * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+			Double_t alt = asin(sin(latitude * degconv) * sin(srcDec[j] * degconv) + cos(latitude * degconv) * cos(srcDec[j] * degconv) * cos((LST - srcRA) * degconv)) * 180 / pi;
+			if(az > 180.0)
+				az = az - 360.0;
+			else if(az < -180.0)
+				az = az + 360.0;
+			int xBin = (int)((az + 180.1) * 10);
+			int yBin = (int)((alt + 90.1) * 10);
+			
+			if(skymapFull360Sweep->GetBinContent(xBin, yBin) > 0)
+			{
+				srctCross[j] += tStep;
+				if(srctCross[j] <= flareTime)
+				{
+					srcAcc[j] += skymapFull360Sweep->GetBinContent(xBin, yBin) * tStep * 240.0;
+				}
+			}
+		}
+		LST += tStep;
+	}
+	
+	Double_t totT = 0, totAcc = 0;
+	int nonZero = 0;
+	
+	for(int i = 0; i < nPoints; i++)
+	{
+		cout << "Source RA: "<< srcRA << " Source Dec: " << srcDec[i] << " Time that source was in view (hr): " << srctCross[i] * (24.0 / 360.0) << " Acceptance of source after " << flareTime * (24.0 / 360.0) << " hours: " << srcAcc[i] << endl;
+		totT += srctCross[i] * (24.0 / 360.0);
+		totAcc += srcAcc[i];
+		if(srctCross[i] > 0.0)
+		{
+			nonZero++;
+		}
+	}
+	
+	cout << "Average source cross time (hr):" << totT / ((double) nonZero) << endl;
+	cout << "Average source acceptance: " << totAcc / ((double) nonZero) << endl;
+}
+
+void SrcFoVTime2()
+{
+	latitude = 38.52028; //lat of frisco peak, utah
+	tStep = 0.25;
+	Double_t LST = 345;
+	Double_t degconv = pi/180.0;
+	
+	TCanvas *tele = new TCanvas("tele","tele", 1600, 750);
+	//~ tele->SetWindowSize(1600, 750);
+	TFile *fileD = TFile::Open("s360.root");
+	TH2F *teleFOV = (TH2F*)fileD->Get("skymapFull360Sweep");
+	TH2F *teleProjEq = new TH2F("proj", "Projected FoV", 361, -180.05, 180.05, 181, -90.05, 90.05);
+	
+	tele->cd(1);
+	tele->SetRightMargin(0.15);
+	
+	//~ int yBinMax = 900;
+	//~ int yBinMin = 662;
+	
+	//~ for(int yBins = yBinMin; yBins <= yBinMax; yBins++)
+	//~ {
+		//~ for(int xBins = 1; xBins <= teleFOV->GetNbinsX(); xBins++)
+		//~ {
+			//~ teleFOV->SetBinContent(xBins, yBins, tStep * 4.0);
+		//~ }
+	//~ }
+	
+	for(int i = 0; i < (int)(360 / tStep); i++)
+	{
+		for(int r = -180; r <= 180; r++) 
+		{ 
+			for(int d = -90; d <= 90; d++) 
+			{
+				Double_t az = (atan2(sin((LST - r) * degconv), cos((LST - r) * degconv) * sin(latitude * degconv) - tan(d * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+				Double_t alt = asin(sin(latitude * degconv) * sin(d * degconv) + cos(latitude * degconv) * cos(d * degconv) * cos((LST - r) * degconv)) * 180 / pi;
+				if(az > 180.0)
+					az = az - 360.0;
+				else if(az < -180.0)
+					az = az + 360.0;
+				int xBin = (int)((az + 180.1) * 10);
+				int yBin = (int)((alt + 90.1) * 10);
+				teleProjEq->Fill((-1 * r), d, teleFOV->GetBinContent(xBin, yBin));
+			}
+		}
+		LST += tStep;
+	}
+	
+	const Int_t Number = 9;
+	Double_t Red[Number]    = { 242./255., 234./255., 237./255., 230./255., 212./255., 156./255., 99./255., 45./255., 0./255.};
+	Double_t Green[Number]  = { 243./255., 238./255., 238./255., 168./255., 101./255.,  45./255.,  0./255.,  0./255., 0./255.};
+	Double_t Blue[Number]   = { 230./255.,  95./255.,  11./255.,   8./255.,   9./255.,   3./255.,  1./255.,  1./255., 0./255.};
+	Double_t Length[Number] = { 0.0000, 0.1250, 0.2500, 0.3750, 0.5000, 0.6250, 0.7500, 0.8750, 1.0000};
+	Int_t nb=99;
+	TColor::CreateGradientColorTable(Number,Length,Red,Green,Blue,nb);
+	
+	teleProjEq->GetXaxis()->SetTitle("Right Ascension [hours]");
+	teleProjEq->GetYaxis()->SetTitle("Declination [deg]");
+	teleProjEq->GetZaxis()->SetTitle("Acceptance [cm^{2}]");
+	teleProjEq->GetXaxis()->SetNdivisions(-512);
+	teleProjEq->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+	teleProjEq->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+	teleProjEq->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+	teleProjEq->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+	teleProjEq->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+	teleProjEq->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+	teleProjEq->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+	teleProjEq->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+	teleProjEq->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+	teleProjEq->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+	teleProjEq->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+	teleProjEq->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+	teleProjEq->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+	
+	teleFOV->SetContour(99);
+	teleProjEq->SetContour(99);
+	teleProjEq->Draw("z aitoff");
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -4317,12 +4777,15 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-PlotAcceptanceSkymaps(hTau);
+//~ PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
 //~ PlotSrcInstantAccVsE(hTau);
 //~ SrcEventTest(hTau);
+//~ SrcFoVTime(hTau);
+//~ SrcFoVTime2();
+PlotFlareFlux();
 
 /*
 cout<<"DEBUGGING"<<endl;
