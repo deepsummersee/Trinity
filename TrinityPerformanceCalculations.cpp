@@ -2571,7 +2571,7 @@ void CalculateDifferentialSensitivity(TH1D *hTau)
 	cout<<"Number of points: "<<n<<endl;
 	for(int i = 0; i <= n; i++)
 	{
-		cout<<grAcceptance->GetPointX(i)<<" , "<<grAcceptance->GetPointY(i)<<endl;
+		// cout<<grAcceptance->GetPointX(i)<<" , "<<grAcceptance->GetPointY(i)<<endl;
 	}
   cDiffSensitivity->cd();
   TLegend *legend = new TLegend(0.53,0.7,0.75,0.88);
@@ -4338,21 +4338,65 @@ void PlotFlareFlux()
 	Double_t logEmin = 6; //min energy log
     Double_t logEmax = 10; //max energy log
     Double_t Enaught = 1e8; //GeV norm
-	Double_t Fnaught[8];
+	Double_t Fnaught1[8];
+  Double_t Fnaught2[8];
+  Double_t Fnaught3[8];
+  Double_t Fnaught4[8];
+  Double_t Fnaught5[8];
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
 	
-	Double_t accs[8];
+	Double_t accs1[8];
+  Double_t accs2[8];
+  Double_t accs3[8];
+  Double_t accs4[8];
+  Double_t accs5[8];
 	Double_t flareT[8];
 	
-	accs[0] = 1.30902e+09;
-	accs[1] = 1.30998e+09;
-	accs[2] = 1.30998e+09;
-	accs[3] = 1.30998e+09;
-	accs[4] = 1.07659e+11;
-	accs[5] = 7.29358e+11;
-	accs[6] = 1.56695e+12;
-	accs[7] = 7.32773e+12;
+	accs1[0] = 2.54194e+10; //RA 77, Dec 0
+	accs1[1] = 2.89951e+10;
+	accs1[2] = 2.8999e+10;
+	accs1[3] = 2.8999e+10;
+	accs1[4] = 5.79839e+10;
+	accs1[5] = 1.91548e+11;
+	accs1[6] = 3.30766e+11;
+	accs1[7] = 4.13288e+12;
 	
+  accs2[0] = 2.67614e+10; //RA 77, Dec 14
+  accs2[1] = 3.16239e+10;
+  accs2[2] = 3.16754e+10;
+  accs2[3] = 3.16754e+10;
+  accs2[4] = 6.35086e+10;
+  accs2[5] = 4.47097e+11;
+  accs2[6] = 6.7104e+11;
+  accs2[7] = 4.4008e+12;
+
+  accs3[0] = 2.6146e+10; //RA 77, Dec 46
+  accs3[1] = 6.0426e+10;
+  accs3[2] = 9.27751e+10;
+  accs3[3] = 1.38118e+11;
+  accs3[4] = 1.38132e+11;
+  accs3[5] = 9.67854e+11;
+  accs3[6] = 2.18768e+12;
+  accs3[7] = 9.20138e+12;
+
+  accs4[0] = 2.61478e+10; //RA -86, Dec -14
+  accs4[1] = 2.95863e+10;
+  accs4[2] = 2.95878e+10;
+  accs4[3] = 2.95878e+10;
+  accs4[4] = 5.925e+10;
+  accs4[5] = 1.9716e+11;
+  accs4[6] = 2.57213e+11;
+  accs4[7] = 4.14253e+12;
+
+  accs5[0] = 1.30902e+09; //RA -86, Dec -46
+  accs5[1] = 1.30998e+09;
+  accs5[2] = 1.30998e+09;
+  accs5[3] = 1.30998e+09;
+  accs5[4] = 1.07659e+11;
+  accs5[5] = 7.29358e+11;
+  accs5[6] = 1.56695e+12;
+  accs5[7] = 7.32773e+12;
+
 	flareT[0] = 1;
 	flareT[1] = 2;
 	flareT[2] = 3;
@@ -4364,22 +4408,60 @@ void PlotFlareFlux()
 	
 	for(int i = 0; i < 8; i++)
 	{
-		Fnaught[i] = pow(Enaught, -nuIndex) / (accs[i] * normInverse);
-		cout<<"Time: "<<flareT[i]<<" Flux: "<<Fnaught[i]<<endl;
+		Fnaught1[i] = pow(Enaught, -nuIndex) / (accs1[i] * normInverse);
+    Fnaught2[i] = pow(Enaught, -nuIndex) / (accs2[i] * normInverse);
+    Fnaught3[i] = pow(Enaught, -nuIndex) / (accs3[i] * normInverse);
+    Fnaught4[i] = pow(Enaught, -nuIndex) / (accs4[i] * normInverse);
+    Fnaught5[i] = pow(Enaught, -nuIndex) / (accs5[i] * normInverse);
+		//cout<<"Time: "<<flareT[i]<<" Flux: "<<Fnaught[i]<<endl;
 	}
 	
 	TCanvas *fluxT = new TCanvas("fluxT", "Flare Neutrino Flux vs. Flare Time", 1300, 900);
-    TGraph *fluxTplot = new TGraph(8, flareT, Fnaught);
-    fluxTplot->SetLineColor(2);
-	fluxTplot->SetLineWidth(4);
-	fluxTplot->SetTitle("Flare Neutrino Flux vs. Flare Time (10^{8} GeV Normalization) [RA: -86 deg, Dec: -46 deg]");
-	fluxTplot->GetYaxis()->SetTitle("Flux [GeV^{-1} cm^{-2} s^{-1}]");
-	fluxTplot->GetXaxis()->SetTitle("Time [hr]");
+  
+  TGraph *fluxTplot[5];
+  fluxTplot[0] = new TGraph(8, flareT, Fnaught1);
+  fluxTplot[1] = new TGraph(8, flareT, Fnaught2);
+  fluxTplot[2] = new TGraph(8, flareT, Fnaught3);
+  fluxTplot[3] = new TGraph(8, flareT, Fnaught4);
+  fluxTplot[4] = new TGraph(8, flareT, Fnaught5);
+
+  for(int i = 0; i < 5; i++)
+  {
+    fluxTplot[i]->GetYaxis()->SetTitle("Flux [GeV^{-1} cm^{-2} s^{-1}]");
+    fluxTplot[i]->GetXaxis()->SetTitle("Time [hr]");
+    fluxTplot[i]->SetTitle("Flare Neutrino Flux vs. Flare Time (10^{8} GeV Normalization)");
+    fluxTplot[i]->SetLineWidth(3);
+   // fluxTplot[i]->SetLineStyle(i + 1);
+  }
+
 	fluxT->SetLogy(1);
 	fluxT->SetLogx(1);
 	fluxT->SetGridx(1);
 	fluxT->SetGridy(1);
-	fluxTplot->Draw("ACP*");
+  
+  fluxTplot[0]->SetLineColor(1);
+  fluxTplot[1]->SetLineColor(2);
+  fluxTplot[2]->SetLineColor(3);
+  fluxTplot[3]->SetLineColor(4);
+  fluxTplot[4]->SetLineColor(6);
+
+  fluxTplot[4]->Draw("CA*");
+  
+  for(int i = 0; i < 4; i++)
+  {
+    fluxTplot[i]->Draw("C*");
+  }
+
+  TLegend *leg = new TLegend(0.3, 0.21, 0.3, 0.21);
+  leg->AddEntry(fluxTplot[0], "RA: 5h8m, Dec: 0 deg", "lp");
+  leg->AddEntry(fluxTplot[1], "RA: 5h8m, Dec: 14 deg", "lp");
+  leg->AddEntry(fluxTplot[2], "RA: 5h8m, Dec: 46 deg", "lp");
+  leg->AddEntry(fluxTplot[3], "RA: 18h16m, Dec: -14 deg", "lp");
+  leg->AddEntry(fluxTplot[4], "RA: 18h16m, Dec: -46 deg", "lp");
+
+  gStyle->SetLegendTextSize(0.015);
+
+  leg->Draw();
 }
 
 void SrcEventTest(TH1D *hTau)
@@ -4463,7 +4545,7 @@ void SrcEventTest(TH1D *hTau)
 void SrcFoVTime(TH1D *hTau)
 {
 	latitude = 38.52028; //lat of frisco peak, utah
-	tStep = 0.25;
+	tStep = 0.25; //0.25 deg = 1 min
 	yMin = 20; //min distance from telescope where tau comes out of the ground in km
 	yMax = 26;
 	DeltaAngleAz = 0.1; //azimuth angle step
@@ -4473,14 +4555,14 @@ void SrcFoVTime(TH1D *hTau)
 	bCombined = kTRUE; //both flor and cher events considered
 	//~ Double_t logEmin = 6.0; //min energy log
     //~ Double_t logEmax = 10.0; //max energy log
-    Double_t LST = -16;
+  Double_t LST = -16;
 	Double_t degconv = pi/180.0;
 	Double_t srcRA = -86;
 	int nPoints = 90;
 	Double_t srcDec[nPoints];
 	Double_t srctCross[nPoints];
 	Double_t srcAcc[nPoints];
-	Double_t flareTime = 360;
+	Double_t flareTime = 15*24;
 	
 	//values from differential sensitivity calculations
     yDelta = 5.0; //5
@@ -4516,7 +4598,7 @@ void SrcFoVTime(TH1D *hTau)
 	}
 	
 	
-	for(int i = 0; i < (int)(360 / tStep); i++)
+	for(int i = 0; i < (int)(flareTime / tStep); i++)
 	{
 		for(int j = 0; j < nPoints; j++)
 		{
@@ -4532,10 +4614,7 @@ void SrcFoVTime(TH1D *hTau)
 			if(skymapFull360Sweep->GetBinContent(xBin, yBin) > 0)
 			{
 				srctCross[j] += tStep;
-				if(srctCross[j] <= flareTime)
-				{
-					srcAcc[j] += skymapFull360Sweep->GetBinContent(xBin, yBin) * tStep * 240.0;
-				}
+				srcAcc[j] += skymapFull360Sweep->GetBinContent(xBin, yBin) * tStep * 240.0;
 			}
 		}
 		LST += tStep;
@@ -4777,13 +4856,13 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-//~ PlotAcceptanceSkymaps(hTau);
+// PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
 //~ PlotSrcInstantAccVsE(hTau);
 //~ SrcEventTest(hTau);
-//~ SrcFoVTime(hTau);
+// SrcFoVTime(hTau);
 //~ SrcFoVTime2();
 PlotFlareFlux();
 
