@@ -2984,37 +2984,62 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	
 	//calculations done for the gridlines of each skymap
 	float conv=TMath::Pi()/180; 
-	float la, lo, x, yy, z;
-	int Nl = 5; // Number of drawn latitudes
-	int NL = 5; // Number of drawn longitudes
-	int M  = 30;
-	
-	TGraph  *latitudes[Nl];
-	TGraph  *longitudes[NL];
-	
-	for (int j=0;j<Nl;++j) {
-		latitudes[j]=new TGraph();
-		la = -90+180/(Nl-1)*j;
-		for (int i=0;i<M+1;++i) {
-			lo = -180+360/M*i;
-			z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-			x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-			yy  = 90*sin(la*conv)/z;
-			latitudes[j]->SetPoint(i,x,yy);
-		}
-	}
-	
-	for (int j=0;j<NL;++j) {
-		longitudes[j]=new TGraph();
-		lo = -180+360/(NL-1)*j;
-		for (int i=0;i<M+1;++i) {
-			la = -90+180/M*i;
-			z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-			x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-			yy  = 90*sin(la*conv)/z;
-			longitudes[j]->SetPoint(i,x,yy);
-		}
-	}
+  float la, lo, x, yy, z, xscale, yscale;
+  int Nl = 13; // Number of drawn latitudes
+  int NL = 13; // Number of drawn longitudes
+  int M  = 30;
+  
+  TGraph  *latitudes[Nl];
+  TGraph  *longitudes[NL];
+  
+  xscale = 57.2;
+  yscale = 57.2;
+
+  for (int j=0;j<Nl;++j) {
+    latitudes[j]=new TGraph();
+    la = -90+180/(Nl-1)*j;
+    for (int i=0;i<M+1;++i) {
+      lo = -180+360/M*i;
+      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      // yy  = 90*sin(la*conv)/z;
+      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      if(z == 0.0)
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        yy = yscale * (sin(la * conv));
+      }
+      else
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      }
+      latitudes[j]->SetPoint(i,x,yy);
+    }
+  }
+  
+  for (int j=0;j<NL;++j) {
+    longitudes[j]=new TGraph();
+    lo = -180+360/(NL-1)*j;
+    for (int i=0;i<M+1;++i) {
+      la = -90+180/M*i;
+      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      // yy  = 90*sin(la*conv)/z;
+      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      if(z == 0.0)
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        yy = yscale * (sin(la * conv));
+      }
+      else
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      }
+      longitudes[j]->SetPoint(i,x,yy);
+    }
+  }
 	
 	//2D histograms for various skymaps + histogram to store number of neutrino events
 	TH2F *skymapSingleAngle = new TH2F("skymapSingleAngle","Acceptance Skymap of Single Azimuth Angle", 3601, -180.05, 180.05, 1801, -90.05, 90.05); //histo for single angle acceptance plot
@@ -4445,11 +4470,11 @@ void PlotFlareFlux()
   fluxTplot[3]->SetLineColor(4);
   fluxTplot[4]->SetLineColor(6);
 
-  fluxTplot[4]->Draw("CA*");
+  fluxTplot[4]->Draw("LA*");
   
   for(int i = 0; i < 4; i++)
   {
-    fluxTplot[i]->Draw("C*");
+    fluxTplot[i]->Draw("L*");
   }
 
   TLegend *leg = new TLegend(0.3, 0.21, 0.3, 0.21);
@@ -4642,18 +4667,86 @@ void SrcFoVTime2()
 {
 	latitude = 38.52028; //lat of frisco peak, utah
 	tStep = 0.25;
-	Double_t LST = 345;
+	Double_t LST = 0;
 	Double_t degconv = pi/180.0;
+  Double_t obsTime = 0.25;
 	
 	TCanvas *tele = new TCanvas("tele","tele", 1600, 750);
 	//~ tele->SetWindowSize(1600, 750);
 	TFile *fileD = TFile::Open("s360.root");
 	TH2F *teleFOV = (TH2F*)fileD->Get("skymapFull360Sweep");
 	TH2F *teleProjEq = new TH2F("proj", "Projected FoV", 361, -180.05, 180.05, 181, -90.05, 90.05);
-	
+  TPad *pad = new TPad("pad","",0,0,1,1);
+
+  pad->SetFillStyle(4000);
+  pad->SetFillColor(0);
+  pad->SetBorderSize(0);
+  pad->SetFrameBorderMode(0);
+  pad->SetFrameLineColor(0); 
+  pad->SetFrameBorderMode(0);
+  pad->Range(-231,-111.875,283,111.875);
+
 	tele->cd(1);
-	tele->SetRightMargin(0.15);
+	tele->SetRightMargin(0.2);
 	
+  float conv=TMath::Pi()/180; 
+  float la, lo, x, yy, z, xscale, yscale;
+  int Nl = 13; // Number of drawn latitudes
+  int NL = 13; // Number of drawn longitudes
+  int M  = 30;
+  
+  TGraph  *latitudes[Nl];
+  TGraph  *longitudes[NL];
+  
+  xscale = 57.2; //57.2
+  yscale = 57.2;
+
+  for (int j=0;j<Nl;++j) {
+    latitudes[j]=new TGraph();
+    la = -90+180/(Nl-1)*j;
+    for (int i=0;i<M+1;++i) {
+      lo = -180+360/M*i;
+      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      // yy  = 90*sin(la*conv)/z;
+      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      if(z == 0.0)
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        yy = yscale * (sin(la * conv));
+      }
+      else
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      }
+      latitudes[j]->SetPoint(i,x,yy);
+    }
+  }
+  
+  for (int j=0;j<NL;++j) {
+    longitudes[j]=new TGraph();
+    lo = -180+360/(NL-1)*j;
+    for (int i=0;i<M+1;++i) {
+      la = -90+180/M*i;
+      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      // yy  = 90*sin(la*conv)/z;
+      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      if(z == 0.0)
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        yy = yscale * (sin(la * conv));
+      }
+      else
+      {
+        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      }
+      longitudes[j]->SetPoint(i,x,yy);
+    }
+  }
+
 	//~ int yBinMax = 900;
 	//~ int yBinMin = 662;
 	
@@ -4665,7 +4758,7 @@ void SrcFoVTime2()
 		//~ }
 	//~ }
 	
-	for(int i = 0; i < (int)(360 / tStep); i++)
+	for(int i = 0; i < (int)(obsTime / tStep); i++)
 	{
 		for(int r = -180; r <= 180; r++) 
 		{ 
@@ -4714,6 +4807,12 @@ void SrcFoVTime2()
 	teleFOV->SetContour(99);
 	teleProjEq->SetContour(99);
 	teleProjEq->Draw("z aitoff");
+  pad->Draw();
+
+  pad->cd();
+
+  for (int j=0;j<Nl;++j) latitudes[j]->Draw("C");
+  for (int j=0;j<NL;++j) longitudes[j]->Draw("C");
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -4863,8 +4962,8 @@ bFluorescence = kFALSE;
 //~ PlotSrcInstantAccVsE(hTau);
 //~ SrcEventTest(hTau);
 // SrcFoVTime(hTau);
-//~ SrcFoVTime2();
-PlotFlareFlux();
+SrcFoVTime2();
+// PlotFlareFlux();
 
 /*
 cout<<"DEBUGGING"<<endl;
