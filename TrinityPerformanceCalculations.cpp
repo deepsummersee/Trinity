@@ -3090,7 +3090,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	gPad->SetLogz(1);
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
-	in.open("1yr.txt"); //open ephem file
+	in.open("1da.txt"); //open ephem file
 	//~ return;
 	for(int r = -180; r <= 180; r++) { //filling the instant sky converage histogram
 		for(int d = -90; d <= 90; d++) {
@@ -3246,6 +3246,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	//~ return;
 	
 	Double_t totalT = 0, totalAcc = 0, maxT = 0, minT = 999999;
+	int maxDay = -1, minDay = -1;
 	//calculations for the time evolution of the horizontal skymaps over various coordinate systems
 	if (in.is_open())
 	{
@@ -3253,7 +3254,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		//~ Double_t origLST;
 		string sTimeS, rTimeS, rTimeM, sTimeM, phM;
 		bool nestNone = false, nestSun = false, nestBoth = false;
-		int nSteps;
+		int nSteps, daycounter = 1;
 		
 		while(in.good()) 
 		{
@@ -3351,12 +3352,16 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			if(deltaT > maxT)
 			{
 				maxT = deltaT;
+				maxDay = daycounter;
 			}
 			
 			if(deltaT < minT)
 			{
 				minT = deltaT;
+				minDay = daycounter;
 			}
+			
+			daycounter++;
 			//~ origLST = LST;
 			/*
 			for(int i = 0; i < nSteps; i++) { //galactic
@@ -3497,8 +3502,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"Duty Cycle: "<<totalT / (365.25 * 360.) * 100.<<" percent"<<endl; //1 year
 	cout<<"Total events observed: "<<totalAcc * normInverse * Fnaught / pow(Enaught, -nuIndex)<<" events/sr"<<endl;
 	//~ cout<<"Duty Cycle: "<<totalT * (24.0 / 360.0) * (1/87600.0) * 100.<<" percent"<<endl; //10 years
-	cout<<"Longest observation window: "<<maxT * (24.0 / 360.0)<<" hours."<<endl;
-	cout<<"Shortest observation window: "<<minT * (24.0 / 360.0)<<" hours."<<endl;
+	cout<<"Longest observation window: "<<maxT * (24.0 / 360.0)<<" hours "<<"on day "<<maxDay<<endl;
+	cout<<"Shortest observation window: "<<minT * (24.0 / 360.0)<<" hours "<<"on day "<<minDay<<endl;
 	cout<<"Average observation time per night: "<<totalT * (24.0 / 360.0) / 365.25<<" hours."<<endl;
 	
 	cout<<"Vertical FoV of telescope (deg): "<<vFov<<endl;
@@ -4580,14 +4585,14 @@ void SrcFoVTime(TH1D *hTau)
 	bCombined = kTRUE; //both flor and cher events considered
 	//~ Double_t logEmin = 6.0; //min energy log
     //~ Double_t logEmax = 10.0; //max energy log
-  Double_t LST = -16;
+	Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-	Double_t srcRA = -86;
-	int nPoints = 90;
+	int nPoints = 5;
+	Double_t srcRA[nPoints];
 	Double_t srcDec[nPoints];
 	Double_t srctCross[nPoints];
 	Double_t srcAcc[nPoints];
-	Double_t flareTime = 15*24;
+	Double_t flareTime = 15*1;
 	
 	//values from differential sensitivity calculations
     yDelta = 5.0; //5
@@ -4617,18 +4622,29 @@ void SrcFoVTime(TH1D *hTau)
 	
 	for(int i = 0; i < nPoints; i++)
 	{
-		srcDec[i] = i * (180 / nPoints) - 90.0;
+		//~ srcDec[i] = i * (180 / nPoints) - 90.0;
 		srctCross[i] = 0.0;
 		srcAcc[i] = 0.0;
 	}
 	
+	srcDec[0] = 0.;
+	srcDec[1] = 45.;
+	srcDec[2] = -57.;
+	srcDec[3] = -28.;
+	srcDec[4] = 6;
+	
+	srcRA[0] = 121; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
+	srcRA[1] = -143;
+	srcRA[2] = 74;
+	srcRA[3] = -65;
+	srcRA[4] = 127;
 	
 	for(int i = 0; i < (int)(flareTime / tStep); i++)
 	{
 		for(int j = 0; j < nPoints; j++)
 		{
-			Double_t az = (atan2(sin((LST - srcRA) * degconv), cos((LST - srcRA) * degconv) * sin(latitude * degconv) - tan(srcDec[j] * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
-			Double_t alt = asin(sin(latitude * degconv) * sin(srcDec[j] * degconv) + cos(latitude * degconv) * cos(srcDec[j] * degconv) * cos((LST - srcRA) * degconv)) * 180 / pi;
+			Double_t az = (atan2(sin((LST - srcRA[j]) * degconv), cos((LST - srcRA[j]) * degconv) * sin(latitude * degconv) - tan(srcDec[j] * degconv) * cos(latitude * degconv)) * 180 / pi) - 180;
+			Double_t alt = asin(sin(latitude * degconv) * sin(srcDec[j] * degconv) + cos(latitude * degconv) * cos(srcDec[j] * degconv) * cos((LST - srcRA[j]) * degconv)) * 180 / pi;
 			if(az > 180.0)
 				az = az - 360.0;
 			else if(az < -180.0)
@@ -4650,7 +4666,7 @@ void SrcFoVTime(TH1D *hTau)
 	
 	for(int i = 0; i < nPoints; i++)
 	{
-		cout << "Source RA: "<< srcRA << " Source Dec: " << srcDec[i] << " Time that source was in view (hr): " << srctCross[i] * (24.0 / 360.0) << " Acceptance of source after " << flareTime * (24.0 / 360.0) << " hours: " << srcAcc[i] << endl;
+		cout << "Source RA: "<< srcRA[i] << " Source Dec: " << srcDec[i] << " Time that source was in view (hr): " << srctCross[i] * (24.0 / 360.0) << " Acceptance of source after " << flareTime * (24.0 / 360.0) << " hours: " << srcAcc[i] << endl;
 		totT += srctCross[i] * (24.0 / 360.0);
 		totAcc += srcAcc[i];
 		if(srctCross[i] > 0.0)
@@ -4659,7 +4675,7 @@ void SrcFoVTime(TH1D *hTau)
 		}
 	}
 	
-	cout << "Average source cross time (hr):" << totT / ((double) nonZero) << endl;
+	cout << "Average source cross time (hr): " << totT / ((double) nonZero) << endl;
 	cout << "Average source acceptance: " << totAcc / ((double) nonZero) << endl;
 }
 
@@ -4955,14 +4971,14 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-// PlotAcceptanceSkymaps(hTau);
+PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
 //~ PlotSrcInstantAccVsE(hTau);
 //~ SrcEventTest(hTau);
-// SrcFoVTime(hTau);
-SrcFoVTime2();
+ //~ SrcFoVTime(hTau);
+//~ SrcFoVTime2();
 // PlotFlareFlux();
 
 /*
