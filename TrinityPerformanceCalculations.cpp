@@ -3090,7 +3090,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	gPad->SetLogz(1);
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
-	in.open("1da.txt"); //open ephem file
+	in.open("1yr.txt"); //open ephem file
 	//~ return;
 	for(int r = -180; r <= 180; r++) { //filling the instant sky converage histogram
 		for(int d = -90; d <= 90; d++) {
@@ -3246,11 +3246,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	//~ return;
 	
 	Double_t totalT = 0, totalAcc = 0, maxT = 0, minT = 999999;
-	int maxDay = -1, minDay = -1;
+	int maxDay = -1, minDay = -1, noObsdays = 0;
 	//calculations for the time evolution of the horizontal skymaps over various coordinate systems
 	if (in.is_open())
 	{
-		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = 0, tStepAdjusted; 
+		Double_t setTimeSun, riseTimeSun, riseTimeMoon, setTimeMoon, phaseMoon, deltaT = -1, tStepAdjusted; 
 		//~ Double_t origLST;
 		string sTimeS, rTimeS, rTimeM, sTimeM, phM;
 		bool nestNone = false, nestSun = false, nestBoth = false;
@@ -3334,6 +3334,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 				}
 			}
 			
+      // LST = 0;
+
 			totalT += deltaT;
 			nSteps = (int)(deltaT / tStep);
 			tStepAdjusted = deltaT / nSteps;
@@ -3361,6 +3363,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 				minDay = daycounter;
 			}
 			
+      if(deltaT == 0)
+      {
+        noObsdays++;
+      }
+
 			daycounter++;
 			//~ origLST = LST;
 			/*
@@ -3505,6 +3512,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"Longest observation window: "<<maxT * (24.0 / 360.0)<<" hours "<<"on day "<<maxDay<<endl;
 	cout<<"Shortest observation window: "<<minT * (24.0 / 360.0)<<" hours "<<"on day "<<minDay<<endl;
 	cout<<"Average observation time per night: "<<totalT * (24.0 / 360.0) / 365.25<<" hours."<<endl;
+  cout<<"Number of days where no observation was possible: "<<noObsdays<<endl;
 	
 	cout<<"Vertical FoV of telescope (deg): "<<vFov<<endl;
 	cout<<"Horizontal FoV of telescope (deg): "<<360<<endl;
@@ -3903,21 +3911,26 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"TA Hotspot Events: "<<nuevents->GetBinContent((int)(-133.503 + 181), (int)(43.1166 + 91))<<endl;
 	cout<<"NGC 1068 Events: "<<nuevents->GetBinContent((int)(-40.6698 + 181), (int)(-0.0132913 + 91))<<endl;
 	
-	int c = 0;
-	Double_t acc_t = 0;
-	int ra = 181 + 86;
-	
-	for(int i = 0; i < 90; i++)
-	{
-		acc_t += skymapProjEq->GetBinContent(ra, (i * (180 / 90) - 90.0) + 91);
-		cout << "Acc at dec " << (i * (180 / 90) - 90.0) << " deg : " << skymapProjEq->GetBinContent(ra, (i * (180 / 90) - 90.0) + 91) << endl;
-		if(skymapProjEq->GetBinContent(ra, (i * (180 / 90) - 90.0) + 91) > 0)
-		{
-			c++;
-		}
-	}
-	
-	cout<<"Avg: "<<acc_t/((double) c);
+  int nPoints = 5;
+	Double_t srcRA[nPoints];
+  Double_t srcDec[nPoints];
+
+  srcDec[0] = 0.;
+  srcDec[1] = 45.;
+  srcDec[2] = -57.;
+  srcDec[3] = -28.;
+  srcDec[4] = 6;
+  
+  srcRA[0] = -121; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
+  srcRA[1] = 143;
+  srcRA[2] = -74;
+  srcRA[3] = 65;
+  srcRA[4] = -127;
+
+  for(int i = 0; i < nPoints; i++)
+  {
+    cout<<"RA: "<<srcRA[i]<<" Dec: "<<srcDec[i]<<" Acceptance: "<<skymapProjEq->GetBinContent((int)(srcRA[i] + 181), (int)(srcDec[i] + 91))<<endl;
+  }
 }
 
 Double_t GetEventSingleSrc(TH1D *hTau, Double_t minElog, Double_t maxElog)
@@ -4685,7 +4698,8 @@ void SrcFoVTime2()
 	tStep = 0.25;
 	Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-  Double_t obsTime = 0.25;
+  Double_t obsTime = 15;
+  int nPoints = 5;
 	
 	TCanvas *tele = new TCanvas("tele","tele", 1600, 750);
 	//~ tele->SetWindowSize(1600, 750);
@@ -4693,6 +4707,7 @@ void SrcFoVTime2()
 	TH2F *teleFOV = (TH2F*)fileD->Get("skymapFull360Sweep");
 	TH2F *teleProjEq = new TH2F("proj", "Projected FoV", 361, -180.05, 180.05, 181, -90.05, 90.05);
   TPad *pad = new TPad("pad","",0,0,1,1);
+  TMarker *srcMrks[nPoints];
 
   pad->SetFillStyle(4000);
   pad->SetFillColor(0);
@@ -4705,6 +4720,12 @@ void SrcFoVTime2()
 	tele->cd(1);
 	tele->SetRightMargin(0.2);
 	
+  for(int i = 0; i < nPoints; i++)
+  {
+    srcMrks[i] = new TMarker(0.,0., 43);
+    srcMrks[i]->SetMarkerSize(1.5);
+  }
+
   float conv=TMath::Pi()/180; 
   float la, lo, x, yy, z, xscale, yscale;
   int Nl = 13; // Number of drawn latitudes
@@ -4788,7 +4809,7 @@ void SrcFoVTime2()
 					az = az + 360.0;
 				int xBin = (int)((az + 180.1) * 10);
 				int yBin = (int)((alt + 90.1) * 10);
-				teleProjEq->Fill((-1 * r), d, teleFOV->GetBinContent(xBin, yBin));
+				teleProjEq->Fill((-1 * r), d, teleFOV->GetBinContent(xBin, yBin) * tStep * 240.);
 			}
 		}
 		LST += tStep;
@@ -4804,7 +4825,7 @@ void SrcFoVTime2()
 	
 	teleProjEq->GetXaxis()->SetTitle("Right Ascension [hours]");
 	teleProjEq->GetYaxis()->SetTitle("Declination [deg]");
-	teleProjEq->GetZaxis()->SetTitle("Acceptance [cm^{2}]");
+	teleProjEq->GetZaxis()->SetTitle("Acceptance [cm^{2} s]");
 	teleProjEq->GetXaxis()->SetNdivisions(-512);
 	teleProjEq->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
 	teleProjEq->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
@@ -4819,6 +4840,21 @@ void SrcFoVTime2()
 	teleProjEq->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
 	teleProjEq->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
 	teleProjEq->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+
+  srcMrks[0]->SetX(-121); // RA: 121, Dec: 0
+  srcMrks[0]->SetY(0);
+
+  srcMrks[1]->SetX(106.016); // RA: -143, Dec: 45
+  srcMrks[1]->SetY(55.8966);
+
+  srcMrks[2]->SetX(-46.7512); // RA: 74, Dec: -57
+  srcMrks[2]->SetY(-59.8111);
+
+  srcMrks[3]->SetX(59.5208); // RA: -65, Dec: -28
+  srcMrks[3]->SetY(-29.4508);
+
+  srcMrks[4]->SetX(-126.444); // RA: 127, Dec: 6
+  srcMrks[4]->SetY(7.425);
 	
 	teleFOV->SetContour(99);
 	teleProjEq->SetContour(99);
@@ -4829,6 +4865,11 @@ void SrcFoVTime2()
 
   for (int j=0;j<Nl;++j) latitudes[j]->Draw("C");
   for (int j=0;j<NL;++j) longitudes[j]->Draw("C");
+
+  for(int i = 0; i < nPoints; i++)
+  {
+    srcMrks[i]->Draw();
+  }
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -4978,7 +5019,7 @@ PlotAcceptanceSkymaps(hTau);
 //~ PlotSrcInstantAccVsE(hTau);
 //~ SrcEventTest(hTau);
  //~ SrcFoVTime(hTau);
-//~ SrcFoVTime2();
+ // SrcFoVTime2();
 // PlotFlareFlux();
 
 /*
