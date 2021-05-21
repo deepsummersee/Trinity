@@ -1,4 +1,5 @@
 #include <TGraph.h>
+#include <TGraphAsymmErrors.h>
 #include <TGaxis.h>
 #include <TTimer.h>
 #include <TCanvas.h>
@@ -2904,7 +2905,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     Double_t logEmax = 10; //max energy log
     Double_t LST = 0;
 	Double_t degconv = pi/180.0;
-	Double_t Enaught = 1; //GeV
+	Double_t Enaught = 1e8; //GeV
 	Double_t Fnaught = 6.694e-23; //GeV^-1 cm^-2 s^-1
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
 	//~ normInverse = 1.0;
@@ -2984,7 +2985,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	
 	//calculations done for the gridlines of each skymap
 	float conv=TMath::Pi()/180; 
-  float la, lo, x, yy, z, xscale, yscale;
+  float la, lo, x, yy, z;
   int Nl = 13; // Number of drawn latitudes
   int NL = 13; // Number of drawn longitudes
   int M  = 30;
@@ -2992,28 +2993,28 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
   TGraph  *latitudes[Nl];
   TGraph  *longitudes[NL];
   
-  xscale = 57.2;
-  yscale = 57.2;
+  //~ float xscale = 57.2;
+  //~ float yscale = 57.2;
 
   for (int j=0;j<Nl;++j) {
     latitudes[j]=new TGraph();
     la = -90+180/(Nl-1)*j;
     for (int i=0;i<M+1;++i) {
       lo = -180+360/M*i;
-      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-      // yy  = 90*sin(la*conv)/z;
-      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
-      if(z == 0.0)
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
-        yy = yscale * (sin(la * conv));
-      }
-      else
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
-        yy = yscale * (sin(la * conv)) / (sin(z) / z);
-      }
+      z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      yy  = 90*sin(la*conv)/z;
+      //~ z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      //~ if(z == 0.0)
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        //~ yy = yscale * (sin(la * conv));
+      //~ }
+      //~ else
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        //~ yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      //~ }
       latitudes[j]->SetPoint(i,x,yy);
     }
   }
@@ -3023,20 +3024,20 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     lo = -180+360/(NL-1)*j;
     for (int i=0;i<M+1;++i) {
       la = -90+180/M*i;
-      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-      // yy  = 90*sin(la*conv)/z;
-      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
-      if(z == 0.0)
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
-        yy = yscale * (sin(la * conv));
-      }
-      else
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
-        yy = yscale * (sin(la * conv)) / (sin(z) / z);
-      }
+      z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      yy  = 90*sin(la*conv)/z;
+      //~ z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      //~ if(z == 0.0)
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        //~ yy = yscale * (sin(la * conv));
+      //~ }
+      //~ else
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        //~ yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      //~ }
       longitudes[j]->SetPoint(i,x,yy);
     }
   }
@@ -3051,6 +3052,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	TH2F *nuevents = (TH2F*)skymapProjEq->Clone("nuevents");
 	TH2F *TT = (TH2F*)skymapFull360Sweep->Clone("TT");
 	TH2F *skymapTimeExp = new TH2F("skymapTimeExp","Souce Exposure Times", 361, -180.05, 180.05, 181, -90.05, 90.05);
+	TH2F *sensEq = new TH2F("sensEq", "Sensitivity after 1 year of observation (10^{8} GeV Normalization)", 361, -180.05, 180.05, 181, -90.05, 90.05);
 	
 	//histogram formatting
 	skymapSingleAngle->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
@@ -3090,7 +3092,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	gPad->SetLogz(1);
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
-	in.open("1yr.txt"); //open ephem file
+	in.open("1yrmod.txt"); //open ephem file
 	//~ return;
 	for(int r = -180; r <= 180; r++) { //filling the instant sky converage histogram
 		for(int d = -90; d <= 90; d++) {
@@ -3335,6 +3337,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			}
 			
       // LST = 0;
+      
+			cout<<"Day: "<<daycounter<<" Hours of obs: "<<deltaT / 15.0<<endl;
 
 			totalT += deltaT;
 			nSteps = (int)(deltaT / tStep);
@@ -3494,6 +3498,23 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			for(int j = 1; j <= skymapProjEq->GetNbinsY(); j++)
 				nuevents->SetBinContent(i, j, skymapProjEq->GetBinContent(i, j) * normInverse * Fnaught / pow(Enaught, -nuIndex));
 		}
+		
+		for(int xBins = 1; xBins <= skymapProjEq->GetNbinsX(); xBins++)
+		{
+		for(int yBins = 1; yBins <= skymapProjEq->GetNbinsY(); yBins++)
+		{
+			if(skymapProjEq->GetBinContent(xBins, yBins) > 0)
+			{
+				Double_t buffer = skymapProjEq->GetBinContent(xBins, yBins);
+				sensEq->SetBinContent(xBins, yBins, pow(Enaught, -nuIndex) / (buffer * normInverse));
+				//~ cout<<pow(Enaught, -nuIndex) / (buffer * normInverse)<<endl;
+			}
+			else
+			{
+				sensEq->SetBinContent(xBins, yBins, 1e-24);
+			}
+		}
+	}
 		
 		in.close();
 	} else {cout << "Unable to open file" << endl; return; }
@@ -3834,6 +3855,104 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 		labelsEq[i]->Draw();
 	}
 	
+	int nPoints = 5;
+	TCanvas *tele1 = new TCanvas("tele1","tele", 1600, 750);
+	TPad *paddie = new TPad("paddie","",0,0,1,1);
+	TMarker *srcMrks[nPoints];
+	
+	for(int i = 0; i < nPoints; i++)
+	{
+		srcMrks[i] = new TMarker(0.,0., 43);
+		srcMrks[i]->SetMarkerSize(2.5);
+	}
+	
+	paddie->SetFillStyle(4000);
+	paddie->SetFillColor(0);
+	paddie->SetBorderSize(0);
+	paddie->SetFrameBorderMode(0);
+	paddie->SetFrameLineColor(0); 
+	paddie->SetFrameBorderMode(0);
+	paddie->Range(-231,-111.875,283,111.875);
+	
+	tele1->cd(1);
+	tele1->SetRightMargin(0.2);
+	
+	sensEq->GetXaxis()->SetTitle("Right Ascension [hours]");
+	sensEq->GetYaxis()->SetTitle("Declination [deg]");
+	sensEq->GetZaxis()->SetTitle("Sensitivity [GeV^{-1} cm^{-2} s^{-1}]");
+	sensEq->GetXaxis()->SetNdivisions(-512);
+	sensEq->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+	sensEq->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+	sensEq->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+	sensEq->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+	sensEq->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+	sensEq->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+	sensEq->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+	sensEq->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+	sensEq->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+	sensEq->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+	sensEq->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+	sensEq->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+	sensEq->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+	
+	sensEq->GetXaxis()->SetTickSize(0);
+	sensEq->GetYaxis()->SetTickSize(0);
+	sensEq->GetYaxis()->SetNdivisions(12,2,2, kFALSE);
+	sensEq->GetYaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"-90");
+	sensEq->GetYaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"-75");
+	sensEq->GetYaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"-60");
+	sensEq->GetYaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"-45");
+	sensEq->GetYaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"-30");
+	sensEq->GetYaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"-15");
+	sensEq->GetYaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0");
+	sensEq->GetYaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"15");
+	sensEq->GetYaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"30");
+	sensEq->GetYaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"45");
+	sensEq->GetYaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"60");
+	sensEq->GetYaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"75");
+	sensEq->GetYaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"90");
+	
+	srcMrks[0]->SetX(-88.107); // RA: 81, Dec: 0
+	srcMrks[0]->SetY(0);
+
+	srcMrks[1]->SetX(-23.7132); // RA: 28, Dec: 45
+	srcMrks[1]->SetY(49.0101);
+
+	srcMrks[2]->SetX(72.7231); // RA: -115, Dec: -57
+	srcMrks[2]->SetY(-66.389);
+
+	srcMrks[3]->SetX(88.4815); // RA: -91, Dec: -28.9
+	srcMrks[3]->SetY(-34.2407);
+
+	srcMrks[4]->SetX(-82.5575); // RA: 76, Dec: 5.69
+	srcMrks[4]->SetY(6.68044);
+	
+	srcMrks[0]->SetMarkerColor(1);
+	srcMrks[1]->SetMarkerColor(2);
+	srcMrks[2]->SetMarkerColor(3);
+	srcMrks[3]->SetMarkerColor(4);
+	srcMrks[4]->SetMarkerColor(6);
+	
+	gPad->SetLogz(1);
+	sensEq->Draw("z aitoff");
+	paddie->Draw();
+	paddie->cd();
+	
+	for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
+	for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
+	
+	for(int i = 0; i < nPoints; i++)
+	{
+		srcMrks[i]->Draw();
+	}
+	
+	for(int i = 0; i < nPoints; i++)
+	{
+		srcMrks[i] = new TMarker(0.,0., 43);
+		srcMrks[i]->SetMarkerSize(2.5);
+		//~ srcMrks[i]->SetMarkerColor(4);
+	}
+	
 	//color formatting
 	const Int_t Number = 9;
 	Double_t Red[Number]    = { 242./255., 234./255., 237./255., 230./255., 212./255., 156./255., 99./255., 45./255., 0./255.};
@@ -3847,6 +3966,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	skymapFullProjection->SetContour(nb);
 	skymapInstantConverage->SetContour(nb);
 	skymapTimeExp->SetContour(nb);
+	sensEq->SetContour(nb);
 	
 	
 	TFile *f = new TFile("eq.root","RECREATE");
@@ -3911,21 +4031,21 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	cout<<"TA Hotspot Events: "<<nuevents->GetBinContent((int)(-133.503 + 181), (int)(43.1166 + 91))<<endl;
 	cout<<"NGC 1068 Events: "<<nuevents->GetBinContent((int)(-40.6698 + 181), (int)(-0.0132913 + 91))<<endl;
 	
-  int nPoints = 5;
+  //~ int nPoints = 5;
 	Double_t srcRA[nPoints];
   Double_t srcDec[nPoints];
 
   srcDec[0] = 0.;
   srcDec[1] = 45.;
   srcDec[2] = -57.;
-  srcDec[3] = -28.;
-  srcDec[4] = 6;
+  srcDec[3] = -28.9;
+  srcDec[4] = 5.69;
   
-  srcRA[0] = -121; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
-  srcRA[1] = 143;
-  srcRA[2] = -74;
-  srcRA[3] = 65;
-  srcRA[4] = -127;
+  srcRA[0] = -81; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
+  srcRA[1] = -28;
+  srcRA[2] = 115;
+  srcRA[3] = 91;
+  srcRA[4] = -76;
 
   for(int i = 0; i < nPoints; i++)
   {
@@ -4381,75 +4501,118 @@ void PlotFlareFlux()
 	Double_t logEmin = 6; //min energy log
     Double_t logEmax = 10; //max energy log
     Double_t Enaught = 1e8; //GeV norm
-	Double_t Fnaught1[8];
-  Double_t Fnaught2[8];
-  Double_t Fnaught3[8];
-  Double_t Fnaught4[8];
-  Double_t Fnaught5[8];
+    int nPoints = 15;
+	Double_t Fnaught1[nPoints];
+  Double_t Fnaught2[nPoints];
+  Double_t Fnaught3[nPoints];
+  Double_t Fnaught4[nPoints];
+  Double_t Fnaught5[nPoints];
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
 	
-	Double_t accs1[8];
-  Double_t accs2[8];
-  Double_t accs3[8];
-  Double_t accs4[8];
-  Double_t accs5[8];
-	Double_t flareT[8];
+	Double_t accs1[nPoints];
+  Double_t accs2[nPoints];
+  Double_t accs3[nPoints];
+  Double_t accs4[nPoints];
+  Double_t accs5[nPoints];
+	Double_t flareT[nPoints];
 	
-	accs1[0] = 2.54194e+10; //RA 77, Dec 0
-	accs1[1] = 2.89951e+10;
-	accs1[2] = 2.8999e+10;
-	accs1[3] = 2.8999e+10;
-	accs1[4] = 5.79839e+10;
-	accs1[5] = 1.91548e+11;
-	accs1[6] = 3.30766e+11;
-	accs1[7] = 4.13288e+12;
+	accs1[0] = 2.5664e+10; //RA 81, Dec 0
+	accs1[1] = 2.87938e+10;
+	accs1[2] = 2.91061e+10;
+	accs1[3] = 2.91061e+10;
+	accs1[4] = 2.91094e+10;
+	accs1[5] = 2.91094e+10;
+	accs1[6] = 2.91094e+10;
+	accs1[7] = 2.91094e+10;
+	accs1[8] = 2.91094e+10;
+	accs1[9] = 2.91129e+10;
+	accs1[10] = 5.81681e+10;
+	accs1[11] = 6.27025e+10;
+	accs1[12] = 2.16966e+11;
+	accs1[13] = 3.08261e+11;
+	accs1[14] = 4.20095e+12;
 	
-  accs2[0] = 2.67614e+10; //RA 77, Dec 14
-  accs2[1] = 3.16239e+10;
-  accs2[2] = 3.16754e+10;
-  accs2[3] = 3.16754e+10;
-  accs2[4] = 6.35086e+10;
-  accs2[5] = 4.47097e+11;
-  accs2[6] = 6.7104e+11;
-  accs2[7] = 4.4008e+12;
+  accs2[0] = 2.70041e+10; //RA 28, Dec 45
+  accs2[1] = 4.50494e+10;
+  accs2[2] = 5.93394e+10;
+  accs2[3] = 9.01804e+10;
+  accs2[4] = 1.22811e+11;
+  accs2[5] = 1.4063e+11;
+  accs2[6] = 1.47413e+11;
+  accs2[7] = 1.47413e+11;
+  accs2[8] = 1.47413e+11;
+  accs2[9] = 1.47413e+11;
+  accs2[10] = 1.47413e+11;
+  accs2[11] = 2.95792e+11;
+  accs2[12] = 1.01695e+12;
+  accs2[13] = 2.13122e+12;
+  accs2[14] = 1.04975e+13;
 
-  accs3[0] = 2.6146e+10; //RA 77, Dec 46
-  accs3[1] = 6.0426e+10;
-  accs3[2] = 9.27751e+10;
-  accs3[3] = 1.38118e+11;
-  accs3[4] = 1.38132e+11;
-  accs3[5] = 9.67854e+11;
-  accs3[6] = 2.18768e+12;
-  accs3[7] = 9.20138e+12;
+  accs3[0] = 6.55902e+08; //RA -115, Dec -57
+  accs3[1] = 2.17665e+09;
+  accs3[2] = 5.92319e+09;
+  accs3[3] = 2.46477e+10;
+  accs3[4] = 5.24013e+10;
+  accs3[5] = 6.87181e+10;
+  accs3[6] = 8.31725e+10;
+  accs3[7] = 1.13913e+11;
+  accs3[8] = 1.57559e+11;
+  accs3[9] = 1.62084e+11;
+  accs3[10] = 1.62084e+11;
+  accs3[11] = 3.23239e+11;
+  accs3[12] = 1.13433e+12;
+  accs3[13] = 2.61381e+12;
+  accs3[14] = 1.16085e+13;
+  
+  accs4[0] = 2.74909e+09; //RA -91, Dec -28.9
+  accs4[1] = 1.36089e+10;
+  accs4[2] = 2.90171e+10;
+  accs4[3] = 3.41823e+10;
+  accs4[4] = 3.41823e+10;
+  accs4[5] = 3.41823e+10;
+  accs4[6] = 3.41823e+10;
+  accs4[7] = 3.41823e+10;
+  accs4[8] = 3.41823e+10;
+  accs4[9] = 3.41823e+10;
+  accs4[10] = 6.48034e+10;
+  accs4[11] = 7.36465e+10;
+  accs4[12] = 2.88051e+11;
+  accs4[13] = 5.35445e+11;
+  accs4[14] = 4.91442e+12;
 
-  accs4[0] = 2.61478e+10; //RA -86, Dec -14
-  accs4[1] = 2.95863e+10;
-  accs4[2] = 2.95878e+10;
-  accs4[3] = 2.95878e+10;
-  accs4[4] = 5.925e+10;
-  accs4[5] = 1.9716e+11;
-  accs4[6] = 2.57213e+11;
-  accs4[7] = 4.14253e+12;
-
-  accs5[0] = 1.30902e+09; //RA -86, Dec -46
-  accs5[1] = 1.30998e+09;
-  accs5[2] = 1.30998e+09;
-  accs5[3] = 1.30998e+09;
-  accs5[4] = 1.07659e+11;
-  accs5[5] = 7.29358e+11;
-  accs5[6] = 1.56695e+12;
-  accs5[7] = 7.32773e+12;
+  accs5[0] = 2.61656e+10; //RA 76, Dec 5.69
+  accs5[1] = 2.9241e+10;
+  accs5[2] = 2.95909e+10;
+  accs5[3] = 2.95973e+10;
+  accs5[4] = 2.95973e+10;
+  accs5[5] = 2.95973e+10;
+  accs5[6] = 2.95973e+10;
+  accs5[7] = 2.95973e+10;
+  accs5[8] = 2.95973e+10;
+  accs5[9] = 3.04847e+10;
+  accs5[10] = 5.92972e+10;
+  accs5[11] = 9.69612e+10;
+  accs5[12] = 3.3445e+11;
+  accs5[13] = 4.93003e+11;
+  accs5[14] = 4.43491e+12;
 
 	flareT[0] = 1;
-	flareT[1] = 2;
-	flareT[2] = 3;
-	flareT[3] = 5;
-	flareT[4] = 24;
-	flareT[5] = 168;
-	flareT[6] = 744;
-	flareT[7] = 8760;
+	flareT[1] = 1.533333;
+	flareT[2] = 2;
+	flareT[3] = 3;
+	flareT[4] = 4;
+	flareT[5] = 4.533333;
+	flareT[6] = 5;
+	flareT[7] = 6;
+	flareT[8] = 8;
+	flareT[9] = 10;
+	flareT[10] = 12;
+	flareT[11] = 24;
+	flareT[12] = 168;
+	flareT[13] = 720;
+	flareT[14] = 8760;
 	
-	for(int i = 0; i < 8; i++)
+	for(int i = 0; i < nPoints; i++)
 	{
 		Fnaught1[i] = pow(Enaught, -nuIndex) / (accs1[i] * normInverse);
     Fnaught2[i] = pow(Enaught, -nuIndex) / (accs2[i] * normInverse);
@@ -4459,20 +4622,20 @@ void PlotFlareFlux()
 		//cout<<"Time: "<<flareT[i]<<" Flux: "<<Fnaught[i]<<endl;
 	}
 	
-	TCanvas *fluxT = new TCanvas("fluxT", "Flare Neutrino Flux vs. Flare Time", 1300, 900);
+	TCanvas *fluxT = new TCanvas("fluxT", "Sensitivity vs. Flare Time", 1300, 900);
   
   TGraph *fluxTplot[5];
-  fluxTplot[0] = new TGraph(8, flareT, Fnaught1);
-  fluxTplot[1] = new TGraph(8, flareT, Fnaught2);
-  fluxTplot[2] = new TGraph(8, flareT, Fnaught3);
-  fluxTplot[3] = new TGraph(8, flareT, Fnaught4);
-  fluxTplot[4] = new TGraph(8, flareT, Fnaught5);
+  fluxTplot[0] = new TGraph(nPoints, flareT, Fnaught1);
+  fluxTplot[1] = new TGraph(nPoints, flareT, Fnaught2);
+  fluxTplot[2] = new TGraph(nPoints, flareT, Fnaught3);
+  fluxTplot[3] = new TGraph(nPoints, flareT, Fnaught4);
+  fluxTplot[4] = new TGraph(nPoints, flareT, Fnaught5);
 
   for(int i = 0; i < 5; i++)
   {
-    fluxTplot[i]->GetYaxis()->SetTitle("Flux [GeV^{-1} cm^{-2} s^{-1}]");
+    fluxTplot[i]->GetYaxis()->SetTitle("Sensitivity [GeV^{-1} cm^{-2} s^{-1}]");
     fluxTplot[i]->GetXaxis()->SetTitle("Time [hr]");
-    fluxTplot[i]->SetTitle("Flare Neutrino Flux vs. Flare Time (10^{8} GeV Normalization)");
+    fluxTplot[i]->SetTitle("Sensitivity vs. Flare Time (10^{8} GeV Normalization)");
     fluxTplot[i]->SetLineWidth(3);
    // fluxTplot[i]->SetLineStyle(i + 1);
   }
@@ -4488,23 +4651,42 @@ void PlotFlareFlux()
   fluxTplot[3]->SetLineColor(4);
   fluxTplot[4]->SetLineColor(6);
 
-  fluxTplot[4]->Draw("LA*");
-  
-  for(int i = 0; i < 4; i++)
-  {
-    fluxTplot[i]->Draw("L*");
-  }
+  fluxTplot[2]->Draw("LA");
+  fluxTplot[0]->Draw("L");
+  fluxTplot[1]->Draw("L");
+  fluxTplot[3]->Draw("L");
+  fluxTplot[4]->Draw("L");
 
   TLegend *leg = new TLegend(0.3, 0.21, 0.3, 0.21);
-  leg->AddEntry(fluxTplot[0], "RA: 5h8m, Dec: 0 deg", "lp");
-  leg->AddEntry(fluxTplot[1], "RA: 5h8m, Dec: 14 deg", "lp");
-  leg->AddEntry(fluxTplot[2], "RA: 5h8m, Dec: 46 deg", "lp");
-  leg->AddEntry(fluxTplot[3], "RA: 18h16m, Dec: -14 deg", "lp");
-  leg->AddEntry(fluxTplot[4], "RA: 18h16m, Dec: -46 deg", "lp");
+  leg->AddEntry(fluxTplot[0], "RA: 5h24m, Dec: 0 deg", "lp");
+  leg->AddEntry(fluxTplot[1], "RA: 1h52m, Dec: 45 deg", "lp");
+  leg->AddEntry(fluxTplot[2], "RA: 16h20m, Dec: -57 deg", "lp");
+  leg->AddEntry(fluxTplot[3], "RA: 17h56m, Dec: -28.9 deg", "lp");
+  leg->AddEntry(fluxTplot[4], "RA: 5h4m, Dec: 5.69 deg", "lp");
 
   gStyle->SetLegendTextSize(0.015);
 
   leg->Draw();
+  
+  Double_t t[3] = {3792, 3792, 3792};
+  Double_t ty[3] = {0, 0.5 , 1};
+  
+  TGraph *g = new TGraph(3, t, ty);
+  g->SetLineWidth(2);
+  g->SetLineStyle(2);
+  g->Draw("L");
+  
+  //~ Double_t x[1] = {3792.};
+  //~ Double_t y[1]  = {1.6e-18};
+  //~ Double_t exl[1] = {0};
+  //~ Double_t eyl[1] = {6e-19};
+  //~ Double_t exh[1] = {0};
+  //~ Double_t eyh[1] = {7e-19};
+  
+  //~ TGraph *gr = new TGraphAsymmErrors(1,x,y,exl,exh,eyl,eyh);
+  //~ gr->SetMarkerColor(4);
+  //~ gr->SetMarkerStyle(21);
+  //~ gr->Draw("LP");
 }
 
 void SrcEventTest(TH1D *hTau)
@@ -4598,14 +4780,14 @@ void SrcFoVTime(TH1D *hTau)
 	bCombined = kTRUE; //both flor and cher events considered
 	//~ Double_t logEmin = 6.0; //min energy log
     //~ Double_t logEmax = 10.0; //max energy log
-	Double_t LST = 0;
+	Double_t LST = 171.149;
 	Double_t degconv = pi/180.0;
 	int nPoints = 5;
 	Double_t srcRA[nPoints];
 	Double_t srcDec[nPoints];
 	Double_t srctCross[nPoints];
 	Double_t srcAcc[nPoints];
-	Double_t flareTime = 15*1;
+	Double_t flareTime = 15*12;
 	
 	//values from differential sensitivity calculations
     yDelta = 5.0; //5
@@ -4640,17 +4822,17 @@ void SrcFoVTime(TH1D *hTau)
 		srcAcc[i] = 0.0;
 	}
 	
-	srcDec[0] = 0.;
-	srcDec[1] = 45.;
-	srcDec[2] = -57.;
-	srcDec[3] = -28.;
-	srcDec[4] = 6;
+	srcDec[0] = 0;
+	srcDec[1] = 45;
+	srcDec[2] = -57;
+	srcDec[3] = -28.9;
+	srcDec[4] = 5.69;
 	
-	srcRA[0] = 121; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
-	srcRA[1] = -143;
-	srcRA[2] = 74;
-	srcRA[3] = -65;
-	srcRA[4] = 127;
+	srcRA[0] = 81; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
+	srcRA[1] = 28;
+	srcRA[2] = -115;
+	srcRA[3] = -91;
+	srcRA[4] = 76;
 	
 	for(int i = 0; i < (int)(flareTime / tStep); i++)
 	{
@@ -4696,16 +4878,21 @@ void SrcFoVTime2()
 {
 	latitude = 38.52028; //lat of frisco peak, utah
 	tStep = 0.25;
-	Double_t LST = 0;
+	Double_t LST = 171.149; //171.149
 	Double_t degconv = pi/180.0;
-  Double_t obsTime = 15;
+  Double_t obsTime = 15*12;
   int nPoints = 5;
+	
+	Double_t logEmin = 6; //min energy log
+    Double_t logEmax = 10; //max energy log
+    Double_t Enaught = 1e8; //GeV norm
+	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1);
 	
 	TCanvas *tele = new TCanvas("tele","tele", 1600, 750);
 	//~ tele->SetWindowSize(1600, 750);
 	TFile *fileD = TFile::Open("s360.root");
 	TH2F *teleFOV = (TH2F*)fileD->Get("skymapFull360Sweep");
-	TH2F *teleProjEq = new TH2F("proj", "Projected FoV", 361, -180.05, 180.05, 181, -90.05, 90.05);
+	TH2F *teleProjEq = new TH2F("proj", "Sensitivity after 12 hours of observation (10^{8} GeV Normalization)", 361, -180.05, 180.05, 181, -90.05, 90.05);
   TPad *pad = new TPad("pad","",0,0,1,1);
   TMarker *srcMrks[nPoints];
 
@@ -4723,11 +4910,13 @@ void SrcFoVTime2()
   for(int i = 0; i < nPoints; i++)
   {
     srcMrks[i] = new TMarker(0.,0., 43);
-    srcMrks[i]->SetMarkerSize(1.5);
+    srcMrks[i]->SetMarkerSize(2.5);
+    //~ srcMrks[i]->SetMarkerColor(4);
   }
+	
 
   float conv=TMath::Pi()/180; 
-  float la, lo, x, yy, z, xscale, yscale;
+  float la, lo, x, yy, z;
   int Nl = 13; // Number of drawn latitudes
   int NL = 13; // Number of drawn longitudes
   int M  = 30;
@@ -4735,28 +4924,29 @@ void SrcFoVTime2()
   TGraph  *latitudes[Nl];
   TGraph  *longitudes[NL];
   
-  xscale = 57.2; //57.2
-  yscale = 57.2;
+  //~ float xscale, yscale;
+  //~ xscale = 57.2; //57.2
+  //~ yscale = 57.2;
 
   for (int j=0;j<Nl;++j) {
     latitudes[j]=new TGraph();
     la = -90+180/(Nl-1)*j;
     for (int i=0;i<M+1;++i) {
       lo = -180+360/M*i;
-      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-      // yy  = 90*sin(la*conv)/z;
-      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
-      if(z == 0.0)
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
-        yy = yscale * (sin(la * conv));
-      }
-      else
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
-        yy = yscale * (sin(la * conv)) / (sin(z) / z);
-      }
+      z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      yy  = 90*sin(la*conv)/z;
+      //~ z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      //~ if(z == 0.0)
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        //~ yy = yscale * (sin(la * conv));
+      //~ }
+      //~ else
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        //~ yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      //~ }
       latitudes[j]->SetPoint(i,x,yy);
     }
   }
@@ -4766,20 +4956,20 @@ void SrcFoVTime2()
     lo = -180+360/(NL-1)*j;
     for (int i=0;i<M+1;++i) {
       la = -90+180/M*i;
-      // z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
-      // x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
-      // yy  = 90*sin(la*conv)/z;
-      z = acos(cos(la * conv) * cos(0.5 * lo * conv));
-      if(z == 0.0)
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
-        yy = yscale * (sin(la * conv));
-      }
-      else
-      {
-        x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
-        yy = yscale * (sin(la * conv)) / (sin(z) / z);
-      }
+      z  = sqrt(1+cos(la*conv)*cos(lo*conv/2));
+      x  = 180*cos(la*conv)*sin(lo*conv/2)/z;
+      yy  = 90*sin(la*conv)/z;
+      //~ z = acos(cos(la * conv) * cos(0.5 * lo * conv));
+      //~ if(z == 0.0)
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv));
+        //~ yy = yscale * (sin(la * conv));
+      //~ }
+      //~ else
+      //~ {
+        //~ x = xscale * (2.0 * cos(la * conv) * sin(0.5 * lo * conv))/(sin(z) / z);
+        //~ yy = yscale * (sin(la * conv)) / (sin(z) / z);
+      //~ }
       longitudes[j]->SetPoint(i,x,yy);
     }
   }
@@ -4807,13 +4997,32 @@ void SrcFoVTime2()
 					az = az - 360.0;
 				else if(az < -180.0)
 					az = az + 360.0;
-				int xBin = (int)((az + 180.1) * 10);
-				int yBin = (int)((alt + 90.1) * 10);
-				teleProjEq->Fill((-1 * r), d, teleFOV->GetBinContent(xBin, yBin) * tStep * 240.);
+				int xBin = (int)((az + 180.1) * 10.);
+				int yBin = (int)((alt + 90.1) * 10.);
+				teleProjEq->Fill((-1. * r), d, teleFOV->GetBinContent(xBin, yBin) * tStep * 240.);
 			}
 		}
 		LST += tStep;
 	}
+	
+	for(int xBins = 1; xBins <= teleProjEq->GetNbinsX(); xBins++)
+	{
+		for(int yBins = 1; yBins <= teleProjEq->GetNbinsY(); yBins++)
+		{
+			if(teleProjEq->GetBinContent(xBins, yBins) > 0)
+			{
+				Double_t buffer = teleProjEq->GetBinContent(xBins, yBins);
+				teleProjEq->SetBinContent(xBins, yBins, pow(Enaught, -nuIndex) / (buffer * normInverse));
+				//~ cout<<pow(Enaught, -nuIndex) / (buffer * normInverse)<<endl;
+			}
+			else
+			{
+				teleProjEq->SetBinContent(xBins, yBins, 1e-23);
+			}
+		}
+	}
+	
+	gPad->SetLogz(1);
 	
 	const Int_t Number = 9;
 	Double_t Red[Number]    = { 242./255., 234./255., 237./255., 230./255., 212./255., 156./255., 99./255., 45./255., 0./255.};
@@ -4825,7 +5034,7 @@ void SrcFoVTime2()
 	
 	teleProjEq->GetXaxis()->SetTitle("Right Ascension [hours]");
 	teleProjEq->GetYaxis()->SetTitle("Declination [deg]");
-	teleProjEq->GetZaxis()->SetTitle("Acceptance [cm^{2} s]");
+	teleProjEq->GetZaxis()->SetTitle("Sensitivity [GeV^{-1} cm^{-2} s^{-1}]");
 	teleProjEq->GetXaxis()->SetNdivisions(-512);
 	teleProjEq->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
 	teleProjEq->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
@@ -4840,24 +5049,49 @@ void SrcFoVTime2()
 	teleProjEq->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
 	teleProjEq->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
 	teleProjEq->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+	
+	teleProjEq->GetXaxis()->SetTickSize(0);
+	teleProjEq->GetYaxis()->SetTickSize(0);
+	teleProjEq->GetYaxis()->SetNdivisions(12,2,2, kFALSE);
+	teleProjEq->GetYaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"-90");
+	teleProjEq->GetYaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"-75");
+	teleProjEq->GetYaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"-60");
+	teleProjEq->GetYaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"-45");
+	teleProjEq->GetYaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"-30");
+	teleProjEq->GetYaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"-15");
+	teleProjEq->GetYaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0");
+	teleProjEq->GetYaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"15");
+	teleProjEq->GetYaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"30");
+	teleProjEq->GetYaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"45");
+	teleProjEq->GetYaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"60");
+	teleProjEq->GetYaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"75");
+	teleProjEq->GetYaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"90");
+	
 
-  srcMrks[0]->SetX(-121); // RA: 121, Dec: 0
+  srcMrks[0]->SetX(-88.107); // RA: 81, Dec: 0
   srcMrks[0]->SetY(0);
 
-  srcMrks[1]->SetX(106.016); // RA: -143, Dec: 45
-  srcMrks[1]->SetY(55.8966);
+  srcMrks[1]->SetX(-23.7132); // RA: 28, Dec: 45
+  srcMrks[1]->SetY(49.0101);
 
-  srcMrks[2]->SetX(-46.7512); // RA: 74, Dec: -57
-  srcMrks[2]->SetY(-59.8111);
+  srcMrks[2]->SetX(72.7231); // RA: -115, Dec: -57
+  srcMrks[2]->SetY(-66.389);
 
-  srcMrks[3]->SetX(59.5208); // RA: -65, Dec: -28
-  srcMrks[3]->SetY(-29.4508);
+  srcMrks[3]->SetX(88.4815); // RA: -91, Dec: -28.9
+  srcMrks[3]->SetY(-34.2407);
 
-  srcMrks[4]->SetX(-126.444); // RA: 127, Dec: 6
-  srcMrks[4]->SetY(7.425);
+  srcMrks[4]->SetX(-82.5575); // RA: 76, Dec: 5.69
+  srcMrks[4]->SetY(6.68044);
+	
+	srcMrks[0]->SetMarkerColor(1);
+	srcMrks[1]->SetMarkerColor(2);
+	srcMrks[2]->SetMarkerColor(3);
+	srcMrks[3]->SetMarkerColor(4);
+	srcMrks[4]->SetMarkerColor(6);
 	
 	teleFOV->SetContour(99);
 	teleProjEq->SetContour(99);
+	//~ teleProjEq->Draw("colz");
 	teleProjEq->Draw("z aitoff");
   pad->Draw();
 
@@ -5012,15 +5246,15 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-PlotAcceptanceSkymaps(hTau);
+//~ PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
 //~ PlotSrcInstantAccVsE(hTau);
 //~ SrcEventTest(hTau);
  //~ SrcFoVTime(hTau);
- // SrcFoVTime2();
-// PlotFlareFlux();
+ //~ SrcFoVTime2();
+ PlotFlareFlux();
 
 /*
 cout<<"DEBUGGING"<<endl;
