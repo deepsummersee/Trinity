@@ -3053,6 +3053,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	TH2F *TT = (TH2F*)skymapFull360Sweep->Clone("TT");
 	TH2F *skymapTimeExp = new TH2F("skymapTimeExp","Souce Exposure Times", 361, -180.05, 180.05, 181, -90.05, 90.05);
 	TH2F *sensEq = new TH2F("sensEq", "Sensitivity after 1 year of observation (10^{8} GeV Normalization)", 361, -180.05, 180.05, 181, -90.05, 90.05);
+  TH2F *sensEqI = (TH2F*)sensEq->Clone("sensint");
 	
 	//histogram formatting
 	skymapSingleAngle->GetXaxis()->SetTitle("Azimuth Angle [degrees]");
@@ -3507,11 +3508,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 			{
 				Double_t buffer = skymapProjEq->GetBinContent(xBins, yBins);
 				sensEq->SetBinContent(xBins, yBins, pow(Enaught, -nuIndex) / (buffer * normInverse));
+        sensEqI->SetBinContent(xBins, yBins, 1. / buffer);
 				//~ cout<<pow(Enaught, -nuIndex) / (buffer * normInverse)<<endl;
-			}
-			else
-			{
-				sensEq->SetBinContent(xBins, yBins, 1e-24);
 			}
 		}
 	}
@@ -3912,26 +3910,28 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	sensEq->GetYaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"75");
 	sensEq->GetYaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"90");
 	
-	srcMrks[0]->SetX(-88.107); // RA: 81, Dec: 0
-	srcMrks[0]->SetY(0);
+  sensEq->GetZaxis()->SetRangeUser(sensEq->GetMinimum(0), sensEq->GetMaximum());
 
-	srcMrks[1]->SetX(-23.7132); // RA: 28, Dec: 45
-	srcMrks[1]->SetY(49.0101);
+	srcMrks[0]->SetX(77.0967); 
+  srcMrks[0]->SetY(-62.0723);
 
-	srcMrks[2]->SetX(72.7231); // RA: -115, Dec: -57
-	srcMrks[2]->SetY(-66.389);
+  srcMrks[1]->SetX(-23.7132);
+  srcMrks[1]->SetY(49.0101);
 
-	srcMrks[3]->SetX(88.4815); // RA: -91, Dec: -28.9
-	srcMrks[3]->SetY(-34.2407);
+  srcMrks[2]->SetX(-66.866); 
+  srcMrks[2]->SetY(22.9632);
 
-	srcMrks[4]->SetX(-82.5575); // RA: 76, Dec: 5.69
-	srcMrks[4]->SetY(6.68044);
-	
-	srcMrks[0]->SetMarkerColor(1);
-	srcMrks[1]->SetMarkerColor(2);
-	srcMrks[2]->SetMarkerColor(3);
-	srcMrks[3]->SetMarkerColor(4);
-	srcMrks[4]->SetMarkerColor(6);
+  srcMrks[3]->SetX(-91.0507); 
+  srcMrks[3]->SetY(-4.75758);
+
+  srcMrks[4]->SetX(-102.639); 
+  srcMrks[4]->SetY(-35.3881);
+  
+  srcMrks[0]->SetMarkerColor(1);
+  srcMrks[4]->SetMarkerColor(2);
+  srcMrks[3]->SetMarkerColor(3);
+  srcMrks[2]->SetMarkerColor(4);
+  srcMrks[1]->SetMarkerColor(6);
 	
 	gPad->SetLogz(1);
 	sensEq->Draw("z aitoff");
@@ -3945,13 +3945,63 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	{
 		srcMrks[i]->Draw();
 	}
-	
-	for(int i = 0; i < nPoints; i++)
-	{
-		srcMrks[i] = new TMarker(0.,0., 43);
-		srcMrks[i]->SetMarkerSize(2.5);
-		//~ srcMrks[i]->SetMarkerColor(4);
-	}
+
+  TCanvas *tele2 = new TCanvas("tele2", "tele1", 1600, 750);
+  TPad *paddie1 = (TPad*)paddie->Clone("paddie1");
+
+  tele2->cd(1);
+  tele2->SetRightMargin(0.2);
+
+  sensEqI->GetXaxis()->SetTitle("Right Ascension [hours]");
+  sensEqI->GetYaxis()->SetTitle("Declination [deg]");
+  sensEqI->GetZaxis()->SetTitle("Integral Sensitivity [cm^{-2} s^{-1}]");
+  sensEqI->SetTitle("Integral Sensitivity after 1 year of observation");
+  sensEqI->GetXaxis()->SetNdivisions(-512);
+  sensEqI->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+  sensEqI->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+  sensEqI->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+  sensEqI->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+  sensEqI->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+  sensEqI->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+  sensEqI->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+  sensEqI->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+  sensEqI->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+  sensEqI->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+  sensEqI->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+  sensEqI->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+  sensEqI->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+  
+  sensEqI->GetXaxis()->SetTickSize(0);
+  sensEqI->GetYaxis()->SetTickSize(0);
+  sensEqI->GetYaxis()->SetNdivisions(12,2,2, kFALSE);
+  sensEqI->GetYaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"-90");
+  sensEqI->GetYaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"-75");
+  sensEqI->GetYaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"-60");
+  sensEqI->GetYaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"-45");
+  sensEqI->GetYaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"-30");
+  sensEqI->GetYaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"-15");
+  sensEqI->GetYaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0");
+  sensEqI->GetYaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"15");
+  sensEqI->GetYaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"30");
+  sensEqI->GetYaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"45");
+  sensEqI->GetYaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"60");
+  sensEqI->GetYaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"75");
+  sensEqI->GetYaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"90");
+
+  sensEqI->GetZaxis()->SetRangeUser(sensEqI->GetMinimum(0), sensEqI->GetMaximum());
+
+  gPad->SetLogz(1);
+  sensEqI->Draw("z aitoff");
+  paddie1->Draw();
+  paddie1->cd();
+
+  for (int j=0;j<Nl;++j) latitudes[j]->Draw("l");
+  for (int j=0;j<NL;++j) longitudes[j]->Draw("l");
+  
+  for(int i = 0; i < nPoints; i++)
+  {
+    srcMrks[i]->Draw();
+  }
 	
 	//color formatting
 	const Int_t Number = 9;
@@ -3967,6 +4017,7 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	skymapInstantConverage->SetContour(nb);
 	skymapTimeExp->SetContour(nb);
 	sensEq->SetContour(nb);
+  sensEqI->SetContour(nb);
 	
 	
 	TFile *f = new TFile("eq.root","RECREATE");
@@ -4035,17 +4086,17 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	Double_t srcRA[nPoints];
   Double_t srcDec[nPoints];
 
-  srcDec[0] = 0.;
-  srcDec[1] = 45.;
-  srcDec[2] = -57.;
-  srcDec[3] = -28.9;
-  srcDec[4] = 5.69;
+  srcDec[0] = -4;
+  srcDec[1] = 45;
+  srcDec[2] = -53;
+  srcDec[3] = -29;
+  srcDec[4] = 20;
   
-  srcRA[0] = -81; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
+  srcRA[0] = -84; 
   srcRA[1] = -28;
-  srcRA[2] = 115;
-  srcRA[3] = 91;
-  srcRA[4] = -76;
+  srcRA[2] = 111;
+  srcRA[3] = -107;
+  srcRA[4] = -64;
 
   for(int i = 0; i < nPoints; i++)
   {
@@ -4516,85 +4567,85 @@ void PlotFlareFlux()
   Double_t accs5[nPoints];
 	Double_t flareT[nPoints];
 	
-	accs1[0] = 2.5664e+10; //RA 81, Dec 0
-	accs1[1] = 2.87938e+10;
-	accs1[2] = 2.91061e+10;
-	accs1[3] = 2.91061e+10;
-	accs1[4] = 2.91094e+10;
-	accs1[5] = 2.91094e+10;
-	accs1[6] = 2.91094e+10;
-	accs1[7] = 2.91094e+10;
-	accs1[8] = 2.91094e+10;
-	accs1[9] = 2.91129e+10;
-	accs1[10] = 5.81681e+10;
-	accs1[11] = 6.27025e+10;
-	accs1[12] = 2.16966e+11;
-	accs1[13] = 3.08261e+11;
-	accs1[14] = 4.20095e+12;
+	accs1[0] = 9.81577e+08; //RA: -111, Dec: -53
+	accs1[1] = 3.67127e+09;
+	accs1[2] = 1.03748e+10;
+	accs1[3] = 3.57868e+10;
+	accs1[4] = 7.00049e+10;
+	accs1[5] = 8.63303e+10;
+	accs1[6] = 9.83448e+10;
+	accs1[7] = 1.24046e+11;
+	accs1[8] = 1.87559e+11;
+	accs1[9] = 2.06354e+11;
+	accs1[10] = 2.06431e+11;
+	accs1[11] = 4.14674e+11;
+	accs1[12] = 1.44484e+12;
+	accs1[13] = 3.26652e+12;
+	accs1[14] = 1.48835e+13;
 	
-  accs2[0] = 2.70041e+10; //RA 28, Dec 45
-  accs2[1] = 4.50494e+10;
-  accs2[2] = 5.93394e+10;
-  accs2[3] = 9.01804e+10;
-  accs2[4] = 1.22811e+11;
-  accs2[5] = 1.4063e+11;
-  accs2[6] = 1.47413e+11;
-  accs2[7] = 1.47413e+11;
-  accs2[8] = 1.47413e+11;
-  accs2[9] = 1.47413e+11;
-  accs2[10] = 1.47413e+11;
-  accs2[11] = 2.95792e+11;
-  accs2[12] = 1.01695e+12;
-  accs2[13] = 2.13122e+12;
-  accs2[14] = 1.04975e+13;
+  accs2[0] = 2.72712e+10; //RA: 107, Dec: -29
+  accs2[1] = 3.33489e+10;
+  accs2[2] = 3.4191e+10;
+  accs2[3] = 3.42476e+10;
+  accs2[4] = 3.42476e+10;
+  accs2[5] = 3.42476e+10;
+  accs2[6] = 3.42476e+10;
+  accs2[7] = 3.42476e+10;
+  accs2[8] = 3.42476e+10;
+  accs2[9] = 3.42476e+10;
+  accs2[10] = 3.42476e+10;
+  accs2[11] = 6.8898e+10;
+  accs2[12] = 2.1456e+11;
+  accs2[13] = 2.79037e+11;
+  accs2[14] = 4.87278e+12;
 
-  accs3[0] = 6.55902e+08; //RA -115, Dec -57
-  accs3[1] = 2.17665e+09;
-  accs3[2] = 5.92319e+09;
-  accs3[3] = 2.46477e+10;
-  accs3[4] = 5.24013e+10;
-  accs3[5] = 6.87181e+10;
-  accs3[6] = 8.31725e+10;
-  accs3[7] = 1.13913e+11;
-  accs3[8] = 1.57559e+11;
-  accs3[9] = 1.62084e+11;
-  accs3[10] = 1.62084e+11;
-  accs3[11] = 3.23239e+11;
-  accs3[12] = 1.13433e+12;
-  accs3[13] = 2.61381e+12;
-  accs3[14] = 1.16085e+13;
+  accs3[0] = 2.57374e+10; //RA : 84, Dec: -4
+  accs3[1] = 2.86457e+10;
+  accs3[2] = 2.89039e+10;
+  accs3[3] = 2.89049e+10;
+  accs3[4] = 2.89049e+10;
+  accs3[5] = 2.89049e+10;
+  accs3[6] = 2.89049e+10;
+  accs3[7] = 2.89049e+10;
+  accs3[8] = 2.89049e+10;
+  accs3[9] = 2.89049e+10;
+  accs3[10] = 4.69111e+10;
+  accs3[11] = 5.77498e+10;
+  accs3[12] = 1.80177e+11;
+  accs3[13] = 2.34062e+11;
+  accs3[14] = 4.22786e+12;
   
-  accs4[0] = 2.74909e+09; //RA -91, Dec -28.9
-  accs4[1] = 1.36089e+10;
-  accs4[2] = 2.90171e+10;
-  accs4[3] = 3.41823e+10;
-  accs4[4] = 3.41823e+10;
-  accs4[5] = 3.41823e+10;
-  accs4[6] = 3.41823e+10;
-  accs4[7] = 3.41823e+10;
-  accs4[8] = 3.41823e+10;
-  accs4[9] = 3.41823e+10;
-  accs4[10] = 6.48034e+10;
-  accs4[11] = 7.36465e+10;
-  accs4[12] = 2.88051e+11;
-  accs4[13] = 5.35445e+11;
-  accs4[14] = 4.91442e+12;
+  accs4[0] = 2.70051e+10; //RA: 64, Dec: 20
+  accs4[1] = 3.30737e+10;
+  accs4[2] = 3.41758e+10;
+  accs4[3] = 3.43998e+10;
+  accs4[4] = 3.43998e+10;
+  accs4[5] = 3.43998e+10;
+  accs4[6] = 3.43998e+10;
+  accs4[7] = 3.43998e+10;
+  accs4[8] = 3.51414e+10;
+  accs4[9] = 6.88678e+10;
+  accs4[10] = 6.88678e+10;
+  accs4[11] = 1.37039e+11;
+  accs4[12] = 4.58548e+11;
+  accs4[13] = 7.34216e+11;
+  accs4[14] = 5.04363e+12;
 
-  accs5[0] = 2.61656e+10; //RA 76, Dec 5.69
-  accs5[1] = 2.9241e+10;
-  accs5[2] = 2.95909e+10;
-  accs5[3] = 2.95973e+10;
-  accs5[4] = 2.95973e+10;
-  accs5[5] = 2.95973e+10;
-  accs5[6] = 2.95973e+10;
-  accs5[7] = 2.95973e+10;
-  accs5[8] = 2.95973e+10;
-  accs5[9] = 3.04847e+10;
-  accs5[10] = 5.92972e+10;
-  accs5[11] = 9.69612e+10;
-  accs5[12] = 3.3445e+11;
-  accs5[13] = 4.93003e+11;
-  accs5[14] = 4.43491e+12;
+  accs5[0] = 2.70041e+10; //RA: 28, Dec: 45
+  accs5[1] = 4.50494e+10;
+  accs5[2] = 5.93394e+10;
+  accs5[3] = 9.01804e+10;
+  accs5[4] = 1.22811e+11;
+  accs5[5] = 1.4063e+11;
+  accs5[6] = 1.47413e+11;
+  accs5[7] = 1.47413e+11;
+  accs5[8] = 1.47413e+11;
+  accs5[9] = 1.47413e+11;
+  accs5[10] = 1.47413e+11;
+  accs5[11] = 2.95792e+11;
+  accs5[12] = 1.01695e+12;
+  accs5[13] = 2.13122e+12;
+  accs5[14] = 1.04975e+13;
 
 	flareT[0] = 1;
 	flareT[1] = 1.533333;
@@ -4651,18 +4702,18 @@ void PlotFlareFlux()
   fluxTplot[3]->SetLineColor(4);
   fluxTplot[4]->SetLineColor(6);
 
-  fluxTplot[2]->Draw("LA");
-  fluxTplot[0]->Draw("L");
+  fluxTplot[0]->Draw("LA");
+  fluxTplot[2]->Draw("L");
   fluxTplot[1]->Draw("L");
   fluxTplot[3]->Draw("L");
   fluxTplot[4]->Draw("L");
 
   TLegend *leg = new TLegend(0.3, 0.21, 0.3, 0.21);
-  leg->AddEntry(fluxTplot[0], "RA: 5h24m, Dec: 0 deg", "lp");
-  leg->AddEntry(fluxTplot[1], "RA: 1h52m, Dec: 45 deg", "lp");
-  leg->AddEntry(fluxTplot[2], "RA: 16h20m, Dec: -57 deg", "lp");
-  leg->AddEntry(fluxTplot[3], "RA: 17h56m, Dec: -28.9 deg", "lp");
-  leg->AddEntry(fluxTplot[4], "RA: 5h4m, Dec: 5.69 deg", "lp");
+  leg->AddEntry(fluxTplot[0], "RA: 16hr36m, Dec: -53 deg", "lp");
+  leg->AddEntry(fluxTplot[1], "RA: 7hr8m, Dec: -29 deg", "lp");
+  leg->AddEntry(fluxTplot[2], "RA: 5hr36m, Dec: -4 deg", "lp");
+  leg->AddEntry(fluxTplot[3], "RA: 4hr16m, Dec: 20 deg", "lp");
+  leg->AddEntry(fluxTplot[4], "RA: 1hr52m, Dec: 45 deg", "lp");
 
   gStyle->SetLegendTextSize(0.015);
 
@@ -4822,17 +4873,17 @@ void SrcFoVTime(TH1D *hTau)
 		srcAcc[i] = 0.0;
 	}
 	
-	srcDec[0] = 0;
+	srcDec[0] = -4;
 	srcDec[1] = 45;
-	srcDec[2] = -57;
-	srcDec[3] = -28.9;
-	srcDec[4] = 5.69;
+	srcDec[2] = -53;
+	srcDec[3] = -29;
+	srcDec[4] = 20;
 	
-	srcRA[0] = 81; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
+	srcRA[0] = 84; //these are opposite ra coords (these follow opposite -180 -> 0 -> 180 ra axis)
 	srcRA[1] = 28;
-	srcRA[2] = -115;
-	srcRA[3] = -91;
-	srcRA[4] = 76;
+	srcRA[2] = -111;
+	srcRA[3] = 107;
+	srcRA[4] = 64;
 	
 	for(int i = 0; i < (int)(flareTime / tStep); i++)
 	{
@@ -4903,6 +4954,80 @@ void SrcFoVTime2()
   pad->SetFrameLineColor(0); 
   pad->SetFrameBorderMode(0);
   pad->Range(-231,-111.875,283,111.875);
+  TPad *pad1 = (TPad*)pad->Clone("pad1");
+
+  teleProjEq->GetXaxis()->SetTitle("Right Ascension [hours]");
+  teleProjEq->GetYaxis()->SetTitle("Declination [deg]");
+  teleProjEq->GetZaxis()->SetTitle("Sensitivity [GeV^{-1} cm^{-2} s^{-1}]");
+  teleProjEq->GetXaxis()->SetNdivisions(-512);
+  teleProjEq->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+  teleProjEq->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+  teleProjEq->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+  teleProjEq->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+  teleProjEq->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+  teleProjEq->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+  teleProjEq->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+  teleProjEq->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+  teleProjEq->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+  teleProjEq->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+  teleProjEq->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+  teleProjEq->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+  teleProjEq->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+  
+  teleProjEq->GetXaxis()->SetTickSize(0);
+  teleProjEq->GetYaxis()->SetTickSize(0);
+  teleProjEq->GetYaxis()->SetNdivisions(12,2,2, kFALSE);
+  teleProjEq->GetYaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"-90");
+  teleProjEq->GetYaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"-75");
+  teleProjEq->GetYaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"-60");
+  teleProjEq->GetYaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"-45");
+  teleProjEq->GetYaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"-30");
+  teleProjEq->GetYaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"-15");
+  teleProjEq->GetYaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0");
+  teleProjEq->GetYaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"15");
+  teleProjEq->GetYaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"30");
+  teleProjEq->GetYaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"45");
+  teleProjEq->GetYaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"60");
+  teleProjEq->GetYaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"75");
+  teleProjEq->GetYaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"90");
+
+  TH2F *teleProjEqS = (TH2F*)teleProjEq->Clone("isens");
+
+  teleProjEqS->SetTitle("Integral Sensitivity after 12 hours of observation");
+  teleProjEqS->GetXaxis()->SetTitle("Right Ascension [hours]");
+  teleProjEqS->GetYaxis()->SetTitle("Declination [deg]");
+  teleProjEqS->GetZaxis()->SetTitle("Integral Sensitivity [cm^{-2} s^{-1}]");
+  teleProjEqS->GetXaxis()->SetNdivisions(-512);
+  teleProjEqS->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
+  teleProjEqS->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
+  teleProjEqS->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
+  teleProjEqS->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
+  teleProjEqS->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
+  teleProjEqS->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
+  teleProjEqS->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
+  teleProjEqS->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
+  teleProjEqS->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
+  teleProjEqS->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
+  teleProjEqS->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
+  teleProjEqS->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
+  teleProjEqS->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
+  
+  teleProjEqS->GetXaxis()->SetTickSize(0);
+  teleProjEqS->GetYaxis()->SetTickSize(0);
+  teleProjEqS->GetYaxis()->SetNdivisions(12,2,2, kFALSE);
+  teleProjEqS->GetYaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"-90");
+  teleProjEqS->GetYaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"-75");
+  teleProjEqS->GetYaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"-60");
+  teleProjEqS->GetYaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"-45");
+  teleProjEqS->GetYaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"-30");
+  teleProjEqS->GetYaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"-15");
+  teleProjEqS->GetYaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0");
+  teleProjEqS->GetYaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"15");
+  teleProjEqS->GetYaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"30");
+  teleProjEqS->GetYaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"45");
+  teleProjEqS->GetYaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"60");
+  teleProjEqS->GetYaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"75");
+  teleProjEqS->GetYaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"90");
 
 	tele->cd(1);
 	tele->SetRightMargin(0.2);
@@ -5013,17 +5138,23 @@ void SrcFoVTime2()
 			{
 				Double_t buffer = teleProjEq->GetBinContent(xBins, yBins);
 				teleProjEq->SetBinContent(xBins, yBins, pow(Enaught, -nuIndex) / (buffer * normInverse));
+        teleProjEqS->SetBinContent(xBins, yBins, 1. / buffer);
 				//~ cout<<pow(Enaught, -nuIndex) / (buffer * normInverse)<<endl;
-			}
-			else
-			{
-				teleProjEq->SetBinContent(xBins, yBins, 1e-23);
 			}
 		}
 	}
 	
 	gPad->SetLogz(1);
+
+  // teleProjEq->GetZaxis()->SetRangeUser(1e-22,1e-15);
 	
+  Double_t max = teleProjEq->GetMaximum();
+  Double_t min = teleProjEq->GetMinimum(0);
+
+  cout<<"Max: "<<max<<" Min: "<<min<<endl;
+
+  teleProjEq->GetZaxis()->SetRangeUser(min,max);
+
 	const Int_t Number = 9;
 	Double_t Red[Number]    = { 242./255., 234./255., 237./255., 230./255., 212./255., 156./255., 99./255., 45./255., 0./255.};
 	Double_t Green[Number]  = { 243./255., 238./255., 238./255., 168./255., 101./255.,  45./255.,  0./255.,  0./255., 0./255.};
@@ -5031,71 +5162,60 @@ void SrcFoVTime2()
 	Double_t Length[Number] = { 0.0000, 0.1250, 0.2500, 0.3750, 0.5000, 0.6250, 0.7500, 0.8750, 1.0000};
 	Int_t nb=99;
 	TColor::CreateGradientColorTable(Number,Length,Red,Green,Blue,nb);
-	
-	teleProjEq->GetXaxis()->SetTitle("Right Ascension [hours]");
-	teleProjEq->GetYaxis()->SetTitle("Declination [deg]");
-	teleProjEq->GetZaxis()->SetTitle("Sensitivity [GeV^{-1} cm^{-2} s^{-1}]");
-	teleProjEq->GetXaxis()->SetNdivisions(-512);
-	teleProjEq->GetXaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"12h");
-	teleProjEq->GetXaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"10h");
-	teleProjEq->GetXaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"8h");
-	teleProjEq->GetXaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"6h");
-	teleProjEq->GetXaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"4h");
-	teleProjEq->GetXaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"2h");
-	teleProjEq->GetXaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0h");
-	teleProjEq->GetXaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"22h");
-	teleProjEq->GetXaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"20h");
-	teleProjEq->GetXaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"18h");
-	teleProjEq->GetXaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"16h");
-	teleProjEq->GetXaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"14h");
-	teleProjEq->GetXaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"12h");
-	
-	teleProjEq->GetXaxis()->SetTickSize(0);
-	teleProjEq->GetYaxis()->SetTickSize(0);
-	teleProjEq->GetYaxis()->SetNdivisions(12,2,2, kFALSE);
-	teleProjEq->GetYaxis()->ChangeLabel(1,-1,-1,-1,-1,-1,"-90");
-	teleProjEq->GetYaxis()->ChangeLabel(2,-1,-1,-1,-1,-1,"-75");
-	teleProjEq->GetYaxis()->ChangeLabel(3,-1,-1,-1,-1,-1,"-60");
-	teleProjEq->GetYaxis()->ChangeLabel(4,-1,-1,-1,-1,-1,"-45");
-	teleProjEq->GetYaxis()->ChangeLabel(5,-1,-1,-1,-1,-1,"-30");
-	teleProjEq->GetYaxis()->ChangeLabel(6,-1,-1,-1,-1,-1,"-15");
-	teleProjEq->GetYaxis()->ChangeLabel(7,-1,-1,-1,-1,-1,"0");
-	teleProjEq->GetYaxis()->ChangeLabel(8,-1,-1,-1,-1,-1,"15");
-	teleProjEq->GetYaxis()->ChangeLabel(9,-1,-1,-1,-1,-1,"30");
-	teleProjEq->GetYaxis()->ChangeLabel(10,-1,-1,-1,-1,-1,"45");
-	teleProjEq->GetYaxis()->ChangeLabel(11,-1,-1,-1,-1,-1,"60");
-	teleProjEq->GetYaxis()->ChangeLabel(12,-1,-1,-1,-1,-1,"75");
-	teleProjEq->GetYaxis()->ChangeLabel(13,-1,-1,-1,-1,-1,"90");
-	
 
-  srcMrks[0]->SetX(-88.107); // RA: 81, Dec: 0
-  srcMrks[0]->SetY(0);
+  srcMrks[0]->SetX(77.0967); 
+  srcMrks[0]->SetY(-62.0723);
 
-  srcMrks[1]->SetX(-23.7132); // RA: 28, Dec: 45
+  srcMrks[1]->SetX(-23.7132);
   srcMrks[1]->SetY(49.0101);
 
-  srcMrks[2]->SetX(72.7231); // RA: -115, Dec: -57
-  srcMrks[2]->SetY(-66.389);
+  srcMrks[2]->SetX(-66.866); 
+  srcMrks[2]->SetY(22.9632);
 
-  srcMrks[3]->SetX(88.4815); // RA: -91, Dec: -28.9
-  srcMrks[3]->SetY(-34.2407);
+  srcMrks[3]->SetX(-91.0507); 
+  srcMrks[3]->SetY(-4.75758);
 
-  srcMrks[4]->SetX(-82.5575); // RA: 76, Dec: 5.69
-  srcMrks[4]->SetY(6.68044);
+  srcMrks[4]->SetX(-102.639); 
+  srcMrks[4]->SetY(-35.3881);
 	
 	srcMrks[0]->SetMarkerColor(1);
-	srcMrks[1]->SetMarkerColor(2);
-	srcMrks[2]->SetMarkerColor(3);
-	srcMrks[3]->SetMarkerColor(4);
-	srcMrks[4]->SetMarkerColor(6);
+	srcMrks[4]->SetMarkerColor(2);
+	srcMrks[3]->SetMarkerColor(3);
+	srcMrks[2]->SetMarkerColor(4);
+	srcMrks[1]->SetMarkerColor(6);
 	
 	teleFOV->SetContour(99);
 	teleProjEq->SetContour(99);
+  teleProjEqS->SetContour(99);
 	//~ teleProjEq->Draw("colz");
 	teleProjEq->Draw("z aitoff");
   pad->Draw();
 
   pad->cd();
+
+  for (int j=0;j<Nl;++j) latitudes[j]->Draw("C");
+  for (int j=0;j<NL;++j) longitudes[j]->Draw("C");
+
+  for(int i = 0; i < nPoints; i++)
+  {
+    srcMrks[i]->Draw();
+  }
+
+
+  TCanvas *tele1 = new TCanvas("tele1", "tele1", 1600, 750);
+  max = teleProjEqS->GetMaximum();
+  min = teleProjEqS->GetMinimum(0);
+
+  cout<<"Max: "<<max<<" Min: "<<min<<endl;
+
+  teleProjEqS->GetZaxis()->SetRangeUser(min, max);
+  gPad->SetLogz(1);
+
+  tele1->cd(1);
+  tele1->SetRightMargin(0.2);
+  teleProjEqS->Draw("z aitoff");
+  pad1->Draw();
+  pad1->cd();
 
   for (int j=0;j<Nl;++j) latitudes[j]->Draw("C");
   for (int j=0;j<NL;++j) longitudes[j]->Draw("C");
@@ -5246,15 +5366,15 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-//~ PlotAcceptanceSkymaps(hTau);
+PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
 //~ PlotSrcInstantAccVsE(hTau);
 //~ SrcEventTest(hTau);
- //~ SrcFoVTime(hTau);
- //~ SrcFoVTime2();
- PlotFlareFlux();
+ // SrcFoVTime(hTau);
+ // SrcFoVTime2();
+ // PlotFlareFlux();
 
 /*
 cout<<"DEBUGGING"<<endl;
