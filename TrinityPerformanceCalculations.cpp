@@ -4559,6 +4559,15 @@ void PlotFlareFlux()
   Double_t Fnaught4[nPoints];
   Double_t Fnaught5[nPoints];
 	Double_t normInverse = (pow(pow(10, logEmin), (1 - nuIndex)) - pow(pow(10, logEmax), (1 - nuIndex))) / (nuIndex - 1); // integral of E^-nuIndex from Emin to Emax to correct for the normalization in the GetTauDistibution function
+	Double_t iceCubeFlux = 1.6e-18; // 100 TeV (1e5 GeV) norm, Gev^-1 cm^-2 s^-1
+	Double_t iceCubeFluxMin = 1e-18;
+	Double_t iceCubeFluxMax = 2.3e-18;
+	Double_t iceCubeNorm = 1e5; // GeV
+	Double_t iceCubeFluxAdj = pow((iceCubeNorm / Enaught), nuIndex) * iceCubeFlux;
+	Double_t iceCubeFluxAdjMin = pow((iceCubeNorm / Enaught), nuIndex) * iceCubeFluxMin;
+	Double_t iceCubeFluxAdjMax = pow((iceCubeNorm / Enaught), nuIndex) * iceCubeFluxMax;
+	
+	cout<<"Adj: "<<iceCubeFluxAdj<<" Min: "<<iceCubeFluxAdjMin<<" Max: "<<iceCubeFluxAdjMax<<endl;
 	
 	Double_t accs1[nPoints];
   Double_t accs2[nPoints];
@@ -4703,23 +4712,15 @@ void PlotFlareFlux()
   fluxTplot[4]->SetLineColor(6);
 
   fluxTplot[0]->Draw("LA");
+  fluxTplot[0]->GetYaxis()->SetRangeUser(iceCubeFluxAdj - iceCubeFluxAdjMin, fluxTplot[0]->GetHistogram()->GetMaximum());
+  //~ fluxTplot[0]->GetYaxis()->SetRangeUser(1e-24, 1e-17);
+  cout<<fluxTplot[0]->GetHistogram()->GetMaximum()<<endl;
   fluxTplot[2]->Draw("L");
   fluxTplot[1]->Draw("L");
   fluxTplot[3]->Draw("L");
   fluxTplot[4]->Draw("L");
 
-  TLegend *leg = new TLegend(0.3, 0.21, 0.3, 0.21);
-  leg->AddEntry(fluxTplot[0], "RA: 16hr36m, Dec: -53 deg", "lp");
-  leg->AddEntry(fluxTplot[1], "RA: 7hr8m, Dec: -29 deg", "lp");
-  leg->AddEntry(fluxTplot[2], "RA: 5hr36m, Dec: -4 deg", "lp");
-  leg->AddEntry(fluxTplot[3], "RA: 4hr16m, Dec: 20 deg", "lp");
-  leg->AddEntry(fluxTplot[4], "RA: 1hr52m, Dec: 45 deg", "lp");
-
-  gStyle->SetLegendTextSize(0.015);
-
-  leg->Draw();
-  
-  Double_t t[3] = {3792, 3792, 3792};
+	Double_t t[3] = {3792, 3792, 3792};
   Double_t ty[3] = {0, 0.5 , 1};
   
   TGraph *g = new TGraph(3, t, ty);
@@ -4727,17 +4728,32 @@ void PlotFlareFlux()
   g->SetLineStyle(2);
   g->Draw("L");
   
-  //~ Double_t x[1] = {3792.};
-  //~ Double_t y[1]  = {1.6e-18};
-  //~ Double_t exl[1] = {0};
-  //~ Double_t eyl[1] = {6e-19};
-  //~ Double_t exh[1] = {0};
-  //~ Double_t eyh[1] = {7e-19};
+  Double_t x[1] = {3792.};
+  Double_t y[1]  = {iceCubeFluxAdj};
+  Double_t exl[1] = {0};
+  Double_t eyl[1] = {iceCubeFluxAdj - iceCubeFluxAdjMin};
+  Double_t exh[1] = {0};
+  Double_t eyh[1] = {iceCubeFluxAdjMax - iceCubeFluxAdj};
   
-  //~ TGraph *gr = new TGraphAsymmErrors(1,x,y,exl,exh,eyl,eyh);
-  //~ gr->SetMarkerColor(4);
-  //~ gr->SetMarkerStyle(21);
-  //~ gr->Draw("LP");
+  TGraph *gr = new TGraphAsymmErrors(1,x,y,exl,exh,eyl,eyh);
+  gr->SetMarkerColor(4);
+  gr->SetMarkerStyle(21);
+  gr->SetMarkerSize(1.5);
+  gr->SetLineWidth(4);
+  gr->SetLineColor(2);
+  gr->Draw("LP");
+
+  TLegend *leg = new TLegend(0.3, 0.21, 0.3, 0.21);
+  leg->AddEntry(fluxTplot[0], "RA: 16hr36m, Dec: -53 deg", "lp");
+  leg->AddEntry(fluxTplot[1], "RA: 7hr8m, Dec: -29 deg", "lp");
+  leg->AddEntry(fluxTplot[2], "RA: 5hr36m, Dec: -4 deg", "lp");
+  leg->AddEntry(fluxTplot[3], "RA: 4hr16m, Dec: 20 deg", "lp");
+  leg->AddEntry(fluxTplot[4], "RA: 1hr52m, Dec: 45 deg", "lp");
+  leg->AddEntry(gr, "IceCube TXS 0506+056 Emission Flux (158 days)", "lp");
+
+  gStyle->SetLegendTextSize(0.015);
+
+  leg->Draw();
 }
 
 void SrcEventTest(TH1D *hTau)
@@ -5366,7 +5382,7 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-PlotAcceptanceSkymaps(hTau);
+//~ PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
@@ -5374,7 +5390,7 @@ PlotAcceptanceSkymaps(hTau);
 //~ SrcEventTest(hTau);
  // SrcFoVTime(hTau);
  // SrcFoVTime2();
- // PlotFlareFlux();
+  PlotFlareFlux();
 
 /*
 cout<<"DEBUGGING"<<endl;
