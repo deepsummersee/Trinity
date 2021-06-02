@@ -4563,10 +4563,17 @@ void PlotFlareFlux()
 	Double_t iceCubeFluxMin = 1e-18;
 	Double_t iceCubeFluxMax = 2.3e-18;
 	Double_t iceCubeNorm = 1e5; // GeV
-	Double_t iceCubeFluxAdj = pow((iceCubeNorm / Enaught), nuIndex) * iceCubeFlux;
-	Double_t iceCubeFluxAdjMin = pow((iceCubeNorm / Enaught), nuIndex) * iceCubeFluxMin;
-	Double_t iceCubeFluxAdjMax = pow((iceCubeNorm / Enaught), nuIndex) * iceCubeFluxMax;
-	
+  Double_t iceCubeIndex = 2.2;
+  Double_t iceCubeIndexError = 0.2;
+  // cout<<"Upper: "<<sqrt( pow((iceCubeFlux * pow((iceCubeNorm / Enaught), iceCubeIndex) * log(iceCubeNorm / Enaught) * (iceCubeIndexError)), 2) + pow((pow((iceCubeNorm / Enaught), iceCubeIndex) * (iceCubeFluxMax - iceCubeFlux)), 2) )<<endl;
+  // cout<<"Lower: "<<sqrt( pow((iceCubeFlux * pow((iceCubeNorm / Enaught), iceCubeIndex) * log(iceCubeNorm / Enaught) * (iceCubeIndexError)), 2) + pow((pow((iceCubeNorm / Enaught), iceCubeIndex) * (iceCubeFlux - iceCubeFluxMin)), 2) )<<endl;
+	// Double_t iceCubeFluxAdj = pow((iceCubeNorm / Enaught), iceCubeIndex) * iceCubeFlux;
+	// Double_t iceCubeFluxAdjMax = sqrt( pow((iceCubeFlux * pow((iceCubeNorm / Enaught), iceCubeIndex) * log(iceCubeNorm / Enaught) * (iceCubeIndexError)), 2) + pow((pow((iceCubeNorm / Enaught), iceCubeIndex) * (iceCubeFluxMax - iceCubeFlux)), 2) );
+	// Double_t iceCubeFluxAdjMin = sqrt( pow((iceCubeFlux * pow((iceCubeNorm / Enaught), iceCubeIndex) * log(iceCubeNorm / Enaught) * (iceCubeIndexError)), 2) + pow((pow((iceCubeNorm / Enaught), iceCubeIndex) * (iceCubeFlux - iceCubeFluxMin)), 2) );
+	Double_t iceCubeFluxAdj = 8.412631259735924e-15;
+  Double_t iceCubeFluxAdjMax = 6.432934436004085e-15;
+  Double_t iceCubeFluxAdjMin = 6.147254371862403e-15;
+  
 	cout<<"Adj: "<<iceCubeFluxAdj<<" Min: "<<iceCubeFluxAdjMin<<" Max: "<<iceCubeFluxAdjMax<<endl;
 	
 	Double_t accs1[nPoints];
@@ -4674,15 +4681,20 @@ void PlotFlareFlux()
 	
 	for(int i = 0; i < nPoints; i++)
 	{
-		Fnaught1[i] = pow(Enaught, -nuIndex) / (accs1[i] * normInverse);
-    Fnaught2[i] = pow(Enaught, -nuIndex) / (accs2[i] * normInverse);
-    Fnaught3[i] = pow(Enaught, -nuIndex) / (accs3[i] * normInverse);
-    Fnaught4[i] = pow(Enaught, -nuIndex) / (accs4[i] * normInverse);
-    Fnaught5[i] = pow(Enaught, -nuIndex) / (accs5[i] * normInverse);
+		Fnaught1[i] = 1.0 / accs1[i];
+    Fnaught2[i] = 1.0 / (accs2[i]);
+    Fnaught3[i] = 1.0 / (accs3[i]);
+    Fnaught4[i] = 1.0 / (accs4[i]);
+    Fnaught5[i] = 1.0 / (accs5[i]);
+    // Fnaught1[i] = pow(Enaught, -nuIndex) / (accs1[i] * normInverse);
+    // Fnaught2[i] = pow(Enaught, -nuIndex) / (accs2[i] * normInverse);
+    // Fnaught3[i] = pow(Enaught, -nuIndex) / (accs3[i] * normInverse);
+    // Fnaught4[i] = pow(Enaught, -nuIndex) / (accs4[i] * normInverse);
+    // Fnaught5[i] = pow(Enaught, -nuIndex) / (accs5[i] * normInverse);
 		//cout<<"Time: "<<flareT[i]<<" Flux: "<<Fnaught[i]<<endl;
 	}
 	
-	TCanvas *fluxT = new TCanvas("fluxT", "Sensitivity vs. Flare Time", 1300, 900);
+	TCanvas *fluxT = new TCanvas("fluxT", "Integral Sensitivity vs. Flare Time", 1300, 900);
   
   TGraph *fluxTplot[5];
   fluxTplot[0] = new TGraph(nPoints, flareT, Fnaught1);
@@ -4693,9 +4705,9 @@ void PlotFlareFlux()
 
   for(int i = 0; i < 5; i++)
   {
-    fluxTplot[i]->GetYaxis()->SetTitle("Sensitivity [GeV^{-1} cm^{-2} s^{-1}]");
+    fluxTplot[i]->GetYaxis()->SetTitle("Integral Sensitivity [cm^{-2} s^{-1}]");
     fluxTplot[i]->GetXaxis()->SetTitle("Time [hr]");
-    fluxTplot[i]->SetTitle("Sensitivity vs. Flare Time (10^{8} GeV Normalization)");
+    fluxTplot[i]->SetTitle("Integral Sensitivity vs. Flare Time");
     fluxTplot[i]->SetLineWidth(3);
    // fluxTplot[i]->SetLineStyle(i + 1);
   }
@@ -4731,9 +4743,9 @@ void PlotFlareFlux()
   Double_t x[1] = {3792.};
   Double_t y[1]  = {iceCubeFluxAdj};
   Double_t exl[1] = {0};
-  Double_t eyl[1] = {iceCubeFluxAdj - iceCubeFluxAdjMin};
+  Double_t eyl[1] = {iceCubeFluxAdjMin};
   Double_t exh[1] = {0};
-  Double_t eyh[1] = {iceCubeFluxAdjMax - iceCubeFluxAdj};
+  Double_t eyh[1] = {iceCubeFluxAdjMax};
   
   TGraph *gr = new TGraphAsymmErrors(1,x,y,exl,exh,eyl,eyh);
   gr->SetMarkerColor(4);
@@ -4743,7 +4755,7 @@ void PlotFlareFlux()
   gr->SetLineColor(2);
   gr->Draw("LP");
 
-  TLegend *leg = new TLegend(0.3, 0.21, 0.3, 0.21);
+  TLegend *leg = new TLegend(0.6,0.7,0.88,0.88);
   leg->AddEntry(fluxTplot[0], "RA: 16hr36m, Dec: -53 deg", "lp");
   leg->AddEntry(fluxTplot[1], "RA: 7hr8m, Dec: -29 deg", "lp");
   leg->AddEntry(fluxTplot[2], "RA: 5hr36m, Dec: -4 deg", "lp");
