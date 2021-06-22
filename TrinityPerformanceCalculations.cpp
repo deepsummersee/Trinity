@@ -1075,6 +1075,7 @@ Double_t CalculateAcceptance(Double_t dMinEnu, Double_t dMaxEnu,TGraph *grDiffAc
 {
    dMinEnu = pow(10,dMinEnu);
    dMaxEnu = pow(10,dMaxEnu);
+   cout<<"DA: "<<DeltaAngle<<" DAAZ: "<<DeltaAngleAz<<endl;
 
    //the hTau passed to the function is ignored. Create a new one below
    //hTau = new TH1D("hTauNew","",dMaxEnu/(dMinEnu/10.),dMinEnu/10.,dMaxEnu);
@@ -1093,22 +1094,23 @@ axis->Set(bins, new_bins);
 axis->Delete();
 */
     //area of cell
-    Double_t dConversion=yDelta*2*pi; //multiply area of cell taking into account that we have a 360 degree FoV
+    Double_t dConversion=yDelta*DeltaAngleAz*pi/180.0; //multiply area of cell taking into account that we have a 360 degree FoV
     dConversion*=1e10; //from km2 to cm2
     //solid angle
-    dConversion*=DeltaAngleAz/180.*pi*DeltaAngle/180.*pi; //multiply area of solidangle cell
+    // dConversion*=DeltaAngleAz/180.*pi*DeltaAngle/180.*pi; //multiply area of solidangle cell
 
     //time Do that in the sensitivity calculation. Acceptance is calculated
     //without the observing time
     //dConversion*=3*365*24*3600*0.20; //exposure time 3 years in seconds with 20% duty cycle
 
    
-    dConversion*=2; //because we only calculate for azimuth angles 0 to azimuth max. There are also negative azimuth values due to symmetry of the problem 
+    // dConversion*=2; //because we only calculate for azimuth angles 0 to azimuth max. There are also negative azimuth values due to symmetry of the problem 
 
 
     Double_t dIntegratedAcceptance=0;
     Int_t p = 0;
     Double_t y = yMin; //y distance from telescope where tau comes out of the ground;
+    yMax = 500;
     while(y<yMax) //loop over distance to telescope
      {
        //cout<<"Distance from Detector: "<<y<<endl;
@@ -1118,12 +1120,12 @@ axis->Delete();
        Double_t MaxAzimuth = dMaxCherenkovAzimuthAngle;
        if( bFluorescence || (bCombined && y<dMaxFluorescenceDistance) ) // so we can make full use of fluoresence events
          MaxAzimuth = 180;
-
-       Double_t elevation=DeltaAngle*0.5;    
+       cout<<"MaxAzi: "<<MaxAzimuth<<endl;
+       Double_t elevation=0;    
        while(elevation<MaxElevation) //loop over elevation
          {
             Double_t dWeightForTriggeredAzimuth = sin(elevation/180.*pi)*y;
-            Double_t azimuth = DeltaAngleAz*0.5;
+            Double_t azimuth = 0;
             while(azimuth<MaxAzimuth) // loop over azimuth
               {
 
@@ -1173,6 +1175,7 @@ axis->Delete();
                      //if(hTau->GetBinContent(i+1)*dP>0 )
                      //cout<<hTau->GetBinCenter(i+1)<<"  "<<hTau->GetBinContent(i+1)<<" y:  "<<y<<"  el: "<<elevation<<" az: "<<azimuth<<" dp: "<<dP<<" dDeltaAccept: "<<dDeltaAcceptance<<" prod: "<<hTau->GetBinContent(i+1)*dP<<endl;
                   }
+                  // cout<<"d delta acc: "<<dDeltaAcceptance<<endl;
                if(dDeltaAcceptance<1e-10 && y>50) //won't get any more acceptance. The >60 is to make sure we do not miss fluorescence events whic can be seen from the back
                    break;
                dAcceptance+=dDeltaAcceptance*sin(elevation/180.*pi); //projection of area cell to trajectory
@@ -2806,6 +2809,9 @@ void GetAcceptanceSingleAngle(Double_t dMinEnu, Double_t dMaxEnu, TH1D *hTau, TH
 						dDeltaAcceptance+=hTau->GetBinContent(i+1)*dP;
 					}
 				}
+        // cout<<"dDeltaAcceptance "<<dDeltaAcceptance<<endl;
+        if(dDeltaAcceptance<1e-95 && y>50) //won't get any more acceptance. The >60 is to make sure we do not miss fluorescence events whic can be seen from the back
+          break;
 				//the acceptances are loaded into the histogram with conversion factors applied
 				if(azimuth != 0.0)
 					skymapSingleAngle1->Fill(azimuth, (-1 * elevation), dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion); 
@@ -2813,6 +2819,7 @@ void GetAcceptanceSingleAngle(Double_t dMinEnu, Double_t dMaxEnu, TH1D *hTau, TH
 				//~ cout<<dDeltaAcceptance*sin(elevation/180.*pi)*y*dConversion<<endl;
 			}
 		}
+    cout<<"Tau emergence distance: "<<y<<endl;
 		y += yDelta; //distance from telescope counter increased by yDelta
 	}
 }
@@ -2894,8 +2901,8 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 {
 	latitude = 38.52028; //lat of frisco peak, utah
 	tStep = 2.5; //10 min step in degrees
-	yMin = 20; //min distance from telescope where tau comes out of the ground in km
-	yMax = 26;
+	yMin = 55; //min distance from telescope where tau comes out of the ground in km
+	yMax = 480;
 	DeltaAngleAz = 0.1; //azimuth angle step
 	DeltaAngle = 0.1; //elevation angle step
 	MaxAzimuth = 180.; //max azi angle
@@ -2921,6 +2928,10 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
     dMinimumNumberPhotoelectrons = dThreshold[iMirrorSize]/dMirrorA[iMirrorSize]; 
     dMinLength = 0.3;
 	
+  // TGraph *a = new TGraph();
+  // cout<<CalculateAcceptance(logEmin, logEmax, a, hTau)<<endl;
+  // return;
+
 	//new canvas for the horizontal skymaps, markers and labels for galactic landmarks
 	int nMarks = 11;
 	TCanvas *skyC = new TCanvas("skyC","Skymap of Acceptance",1600,750); 
@@ -3086,11 +3097,11 @@ void PlotAcceptanceSkymaps(TH1D *hTau)
 	}
 	
 	skyC->cd(1);
-	gPad->SetLogz(1);
+	gPad->SetLogz(0);
 	skymapSingleAngle->Draw("COLZ"); //plot single angle skymap
 	
 	skyC->cd(2);
-	gPad->SetLogz(1);
+	gPad->SetLogz(0);
 	skymapFull360Sweep->Draw("COLZ"); //plot 360 sweep skymap
 	ifstream in;
 	in.open("1yrmod.txt"); //open ephem file
@@ -5394,7 +5405,7 @@ bFluorescence = kFALSE;
 //~ CalculateSkyExposure(hTau);
 //
 
-//~ PlotAcceptanceSkymaps(hTau);
+PlotAcceptanceSkymaps(hTau);
 //~ PlotAcceptanceVsEnergy(hTau);
 //~ GetEventVEnergy(hTau);
 //~ PrintAccSrc(hTau, 6.0, 6.5);
@@ -5402,7 +5413,7 @@ bFluorescence = kFALSE;
 //~ SrcEventTest(hTau);
  // SrcFoVTime(hTau);
  // SrcFoVTime2();
-  PlotFlareFlux();
+  // PlotFlareFlux();
 
 /*
 cout<<"DEBUGGING"<<endl;
